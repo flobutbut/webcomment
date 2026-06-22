@@ -33,9 +33,10 @@ export function AuthModal({ initialMode = 'signin', onClose }: Props) {
   const [email, setEmail]     = useState('')
   const [password, setPass]   = useState('')
   const [username, setUser]   = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState<string | null>(null)
-  const [done, setDone]       = useState(false)
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState<string | null>(null)
+  const [done, setDone]         = useState(false)
+  const [showPass, setShowPass] = useState(false)
 
   function switchMode(m: 'signin' | 'signup') {
     setMode(m)
@@ -156,14 +157,38 @@ export function AuthModal({ initialMode = 'signin', onClose }: Props) {
                 required
                 autoFocus={mode === 'signin'}
               />
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={e => setPass(e.target.value)}
-                className={INPUT}
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showPass ? 'text' : 'password'}
+                  placeholder="Password"
+                  value={password}
+                  onChange={e => setPass(e.target.value)}
+                  className={INPUT + ' pr-10'}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPass(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-300 transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPass ? (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                    </svg>
+                  ) : (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+              {mode === 'signup' && (
+                <p className="font-mono text-[10px] text-zinc-600 -mt-1 px-1">min. 6 characters</p>
+              )}
 
               {error && (
                 <p className="text-red-400 text-xs font-mono border border-red-900/30 bg-red-900/10 rounded-lg px-3 py-2">
