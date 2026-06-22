@@ -6,6 +6,7 @@ node_modules/
 # Build output
 extension/dist/
 extension/.vite/
+webapp/dist/
 
 # Environment variables
 .env
