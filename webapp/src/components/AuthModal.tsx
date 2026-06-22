@@ -53,9 +53,10 @@ export function AuthModal({ initialMode = 'signin', onClose }: Props) {
   }
 
   function handleUsernameChange(val: string) {
-    setUser(val)
+    const cleaned = val.replace(/ /g, '_')
+    setUser(cleaned)
     if (!avatarEdited) {
-      setAvatar(val.replace(/\s/g, '').slice(0, 2).toUpperCase())
+      setAvatar(cleaned.replace(/[^a-zA-Z0-9]/g, '').slice(0, 2).toUpperCase())
     }
   }
 
@@ -165,22 +166,30 @@ export function AuthModal({ initialMode = 'signin', onClose }: Props) {
               {/* Username + avatar preview tile */}
               {mode === 'signup' && (
                 <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-[#0c0c0c] border border-[#222]">
-                  <div className={`group w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors cursor-text ${
-                    avatarLetters
-                      ? 'bg-blue-600/20 has-[:focus]:ring-2 has-[:focus]:ring-blue-500/40 has-[:focus]:ring-offset-1 has-[:focus]:ring-offset-[#0c0c0c]'
-                      : 'border-2 border-dashed border-[#333] hover:border-[#444] has-[:focus]:border-blue-600 has-[:focus]:border-solid'
-                  }`}>
-                    <input
-                      type="text"
-                      value={avatarLetters}
-                      onChange={e => handleAvatarChange(e.target.value)}
-                      maxLength={2}
-                      placeholder="AB"
-                      className={`w-7 text-center font-bold text-[12px] bg-transparent focus:outline-none cursor-text ${
-                        avatarLetters ? 'text-blue-400' : 'text-transparent placeholder:text-zinc-700 placeholder:font-normal'
-                      }`}
-                      title="Edit initials"
-                    />
+                  <div className="relative group/avatar flex-shrink-0 cursor-text">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-150 ${
+                      avatarLetters
+                        ? 'bg-blue-600/20 group-hover/avatar:bg-blue-600/30 has-[:focus]:ring-2 has-[:focus]:ring-blue-500/40 has-[:focus]:ring-offset-1 has-[:focus]:ring-offset-[#0c0c0c]'
+                        : 'border-2 border-dashed border-[#333] group-hover/avatar:border-[#555] has-[:focus]:border-blue-600 has-[:focus]:border-solid'
+                    }`}>
+                      <input
+                        type="text"
+                        value={avatarLetters}
+                        onChange={e => handleAvatarChange(e.target.value)}
+                        maxLength={2}
+                        placeholder="AB"
+                        className={`w-7 text-center font-bold text-[12px] bg-transparent focus:outline-none cursor-text ${
+                          avatarLetters ? 'text-blue-400' : 'text-transparent placeholder:text-zinc-700 placeholder:font-normal'
+                        }`}
+                      />
+                    </div>
+                    {/* Pencil badge — visible on hover, hidden when editing */}
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[#1c1c1c] border border-[#333] flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 group-focus-within/avatar:opacity-0 transition-opacity duration-150 pointer-events-none">
+                      <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                      </svg>
+                    </div>
                   </div>
                   <input
                     type="text"
