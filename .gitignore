@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+extension/dist/
+extension/.vite/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Editor
+.DS_Store
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Claude memory (local only)
+.claude/

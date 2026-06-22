@@ -1,0 +1,47 @@
+{
+  "manifest_version": 3,
+  "name": "WebComment",
+  "version": "0.1.0",
+  "description": "Private anchored comments on any web page.",
+
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "tabs",
+    "notifications",
+    "webNavigation"
+  ],
+
+  "host_permissions": [
+    "<all_urls>"
+  ],
+
+  "background": {
+    "service_worker": "src/background/service-worker.ts",
+    "type": "module"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content/content.ts"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "action": {
+    "default_popup": "src/popup/index.html",
+    "default_icon": {
+      "16":  "icons/16.png",
+      "48":  "icons/48.png",
+      "128": "icons/128.png"
+    }
+  },
+
+  "icons": {
+    "16":  "icons/16.png",
+    "48":  "icons/48.png",
+    "128": "icons/128.png"
+  }
+}
