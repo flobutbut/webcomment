@@ -159,10 +159,12 @@ Public mode allows displaying comments visible to all extension users on the sam
 - [ ] Privacy policy
 - [ ] Chrome Web Store submission
 
-### Web App (`webapp/` — Next.js, deployed to `webcomment.app`)
-- [ ] Initialize Next.js + Tailwind project (same design system as the extension)
-- [ ] `/` — landing page with install button + product explanation
-- [ ] `/login` — Supabase auth (email/password, same account as the extension)
+### Web App (`webapp/` — Vite + React, deployed on Vercel)
+- [x] Initialize Vite + React + Tailwind project
+- [x] `/` — landing page with install button, use cases, Supabase auth (login + signup)
+- [x] Deploy on Vercel (GitHub integration, auto-deploy on push to `main`)
+- [ ] Custom domain (configure DNS at Hostinger → Vercel)
+- [ ] `/login` — dedicated auth page (email/password, same account as the extension)
 - [ ] `/dashboard` — inbox and "my comments" with filters (site, date, unread)
 - [ ] `/shared/:token` — screenshot read view for recipients without the extension (replaces the current error screen)
 - [ ] `/s/:token` — share link resolution → redirect to target page

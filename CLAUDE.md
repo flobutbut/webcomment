@@ -8,6 +8,7 @@ Chrome Extension (MV3) for sending private anchored comments (with screenshots) 
 - **Icons**: Iconify (`@iconify/react` + `@iconify-icons/lucide`) — offline, CSP-compatible with MV3
 - **Backend**: Supabase (Auth, Postgres, Storage, Realtime, Edge Functions)
 - **Email**: Resend via Edge Function
+- **Webapp**: Vite + React 18 + Tailwind CSS, deployed on Vercel
 
 ## Repo structure
 
@@ -23,6 +24,15 @@ extension/          # Chrome extension code
   manifest.json
   vite.config.ts
 
+webapp/             # Landing page (Vite + React + Tailwind)
+  src/
+    App.tsx         # all sections (Hero, How it works, Use cases, CTA)
+    components/
+      AuthModal.tsx # login / signup connected to Supabase
+    lib/
+      supabase.ts   # shared Supabase client
+  .env.example      # copy to .env.local and fill in the anon key
+
 supabase/
   migrations/       # SQL migrations to apply in order
 
@@ -36,13 +46,39 @@ cd extension
 npm install
 npm run dev     # watch build → load dist/ in chrome://extensions
 npm run build   # production build
+
+cd webapp
+npm install
+npm run dev     # local dev server → http://localhost:5173
+npm run build   # production build (output: dist/)
 ```
 
 ## Supabase
 
 - **Project**: `yhavbvgahhtlddyrycai` (WebComment)
 - **URL**: `https://yhavbvgahhtlddyrycai.supabase.co`
-- Environment variables in `extension/.env.local`
+- Environment variables in `extension/.env.local` and `webapp/.env.local`
+
+## Webapp — Vercel deployment
+
+- **Platform**: Vercel (free tier)
+- **GitHub integration**: auto-deploy on every push to `main`
+- **Root directory**: `webapp/` (critical — must be set in Vercel project settings)
+- **Build command**: `npm run build` (auto-detected)
+- **Output directory**: `dist/` (auto-detected)
+- **Environment variables** to set in Vercel dashboard → Settings → Environment Variables:
+  - `VITE_SUPABASE_URL` = `https://yhavbvgahhtlddyrycai.supabase.co`
+  - `VITE_SUPABASE_ANON_KEY` = anon key from Supabase Dashboard → Settings → API
+
+### First deploy (from scratch)
+1. vercel.com → Add New Project → import `flobutbut/webcomment`
+2. Set Root Directory to `webapp/`
+3. Add the two env vars above
+4. Deploy
+
+### Custom domain
+Add via Vercel Dashboard → Project → Settings → Domains.
+Then update DNS at Hostinger: add a CNAME record pointing to `cname.vercel-dns.com`.
 
 ## Important MV3 constraints
 
