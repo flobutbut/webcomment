@@ -26,6 +26,10 @@ const STATIC_PINS: DemoComment[] = [
 const RATE_LIMIT_KEY = 'wc_demo_last_post'
 const RATE_LIMIT_MS = 5 * 60 * 1000
 
+const getDeleteToken = (id: string) => localStorage.getItem(`wc_del_${id}`)
+const setDeleteToken = (id: string, token: string) => localStorage.setItem(`wc_del_${id}`, token)
+const removeDeleteToken = (id: string) => localStorage.removeItem(`wc_del_${id}`)
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
 }
@@ -46,7 +50,7 @@ export function PageComments() {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
     supabase
       .from('demo_comments')
-      .select('*')
+      .select('id, x_pct, y_pct, message, author, created_at')
       .gte('created_at', cutoff)
       .order('created_at', { ascending: true })
       .then(({ data }) => { if (data) setComments(data) })
@@ -54,7 +58,14 @@ export function PageComments() {
     const channel = supabase
       .channel('demo_comments_rt')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'demo_comments' }, payload => {
-        setComments(prev => [...prev, payload.new as DemoComment])
+        const { delete_token, ...comment } = payload.new as DemoComment & { delete_token?: string }
+        void delete_token
+        setComments(prev => [...prev, comment])
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'demo_comments' }, payload => {
+        const id = (payload.old as { id: string }).id
+        setComments(prev => prev.filter(c => c.id !== id))
+        setActivePin(prev => prev === id ? null : prev)
       })
       .subscribe()
 
@@ -107,22 +118,45 @@ export function PageComments() {
     }
 
     setSubmitting(true)
-    const { error } = await supabase.from('demo_comments').insert({
-      x_pct: composer.xPct,
-      y_pct: composer.yPct,
-      message: message.trim().slice(0, 200),
-      author: author.trim().slice(0, 30) || null,
-    })
+    const { data, error } = await supabase
+      .from('demo_comments')
+      .insert({
+        x_pct: composer.xPct,
+        y_pct: composer.yPct,
+        message: message.trim().slice(0, 200),
+        author: author.trim().slice(0, 30) || null,
+      })
+      .select('id, delete_token')
+      .single()
 
-    if (error) {
+    if (error || !data) {
       setPostError('Failed to post. Try again.')
     } else {
+      setDeleteToken(data.id, data.delete_token)
       localStorage.setItem(RATE_LIMIT_KEY, String(Date.now()))
       setComposer(null)
       setMessage('')
       setAuthor('')
     }
     setSubmitting(false)
+  }
+
+  const handleDelete = async (pin: DemoComment, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const token = getDeleteToken(pin.id)
+    if (!token) return
+
+    const { error } = await supabase
+      .from('demo_comments')
+      .delete()
+      .eq('id', pin.id)
+      .eq('delete_token', token)
+
+    if (!error) {
+      setComments(prev => prev.filter(c => c.id !== pin.id))
+      setActivePin(null)
+      removeDeleteToken(pin.id)
+    }
   }
 
   const allPins = [...STATIC_PINS, ...comments]
@@ -136,12 +170,12 @@ export function PageComments() {
 
   return (
     <>
-      {/* Absolute overlay — pins anchored to page coordinates */}
       <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 35 }}>
         {allPins.map(pin => {
           const isStatic = pin.id.startsWith('static-')
           const isActive = activePin === pin.id
           const tooltipBelow = pin.y_pct < 60
+          const canDelete = !isStatic && !!getDeleteToken(pin.id)
 
           return (
             <div
@@ -168,7 +202,7 @@ export function PageComments() {
               />
               {isActive && (
                 <div
-                  className={`absolute left-1/2 -translate-x-1/2 w-56 bg-[#111] border border-[#252525] rounded-lg p-3 shadow-2xl pointer-events-none ${
+                  className={`absolute left-1/2 -translate-x-1/2 w-56 bg-[#111] border border-[#252525] rounded-lg p-3 shadow-2xl pointer-events-auto ${
                     tooltipBelow ? 'top-5' : 'bottom-5'
                   }`}
                 >
@@ -177,10 +211,20 @@ export function PageComments() {
                   )}
                   <p className="text-xs text-zinc-300 leading-relaxed">{pin.message}</p>
                   {!isStatic && (
-                    <p className="font-mono text-[9px] text-zinc-600 mt-2">
-                      {new Date(pin.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      {' · '}disappears in 24h
-                    </p>
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="font-mono text-[9px] text-zinc-600">
+                        {new Date(pin.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {' · '}disappears in 24h
+                      </p>
+                      {canDelete && (
+                        <button
+                          onClick={e => handleDelete(pin, e)}
+                          className="font-mono text-[9px] text-zinc-600 hover:text-red-500 transition-colors ml-2"
+                        >
+                          delete
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
@@ -189,7 +233,6 @@ export function PageComments() {
         })}
       </div>
 
-      {/* Fixed composer — follows viewport */}
       {composer && (
         <div
           data-composer="true"
