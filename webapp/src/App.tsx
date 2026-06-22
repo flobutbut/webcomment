@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { AuthModal } from './components/AuthModal'
+import { PageComments } from './components/PageComments'
 
 const GITHUB_URL = 'https://github.com/flobutbut/webcomment'
 
@@ -54,7 +55,7 @@ export default function App() {
   const [modal, setModal] = useState<'signin' | 'signup' | null>(null)
 
   return (
-    <div className="min-h-screen bg-[#080808] text-white">
+    <div className="relative min-h-screen bg-[#080808] text-white cursor-crosshair">
 
       {/* ── Nav ─────────────────────────────────────────────────── */}
       <nav className="fixed top-0 left-0 right-0 z-40 border-b border-[#111] bg-[#080808]/90 backdrop-blur-md">
@@ -283,6 +284,8 @@ export default function App() {
           </span>
         </div>
       </footer>
+
+      <PageComments />
 
       {modal && (
         <AuthModal initialMode={modal} onClose={() => setModal(null)} />
