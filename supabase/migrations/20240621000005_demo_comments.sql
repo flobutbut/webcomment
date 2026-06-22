@@ -21,3 +21,5 @@ create policy "demo_comments_insert" on public.demo_comments
     char_length(message) between 1 and 200 and
     (author is null or char_length(author) <= 30)
   );
+
+alter publication supabase_realtime add table public.demo_comments;
