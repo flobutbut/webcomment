@@ -13,10 +13,12 @@ function validateUsername(u: string): string | null {
 }
 
 function translateError(msg: string): string {
-  if (msg.includes('Invalid login credentials')) return 'Incorrect email or password.'
-  if (msg.includes('Email not confirmed')) return 'Please confirm your email address first.'
-  if (msg.includes('User already registered')) return 'An account with this email already exists.'
-  if (msg.includes('Password should be')) return 'Password must be at least 6 characters.'
+  if (msg.includes('Invalid login credentials'))   return 'Incorrect email or password.'
+  if (msg.includes('Email not confirmed'))         return 'Please confirm your email address first.'
+  if (msg.includes('User already registered'))     return 'An account with this email already exists.'
+  if (msg.includes('Password should be'))          return 'Password must be at least 6 characters.'
+  if (msg.includes('profiles_username_key'))       return 'This username is already taken.'
+  if (msg.includes('Database error'))              return 'This username is already taken.'
   return msg
 }
 
@@ -29,18 +31,37 @@ const INPUT = `
 `
 
 export function AuthModal({ initialMode = 'signin', onClose }: Props) {
-  const [mode, setMode]       = useState<'signin' | 'signup'>(initialMode)
-  const [email, setEmail]     = useState('')
-  const [password, setPass]   = useState('')
-  const [username, setUser]   = useState('')
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState<string | null>(null)
-  const [done, setDone]         = useState(false)
-  const [showPass, setShowPass] = useState(false)
+  const [mode, setMode]             = useState<'signin' | 'signup'>(initialMode)
+  const [email, setEmail]           = useState('')
+  const [password, setPass]         = useState('')
+  const [confirm, setConfirm]       = useState('')
+  const [username, setUser]         = useState('')
+  const [avatarLetters, setAvatar]  = useState('')
+  const [avatarEdited, setAvatarEdited] = useState(false)
+  const [showPass, setShowPass]     = useState(false)
+  const [loading, setLoading]       = useState(false)
+  const [error, setError]           = useState<string | null>(null)
+  const [done, setDone]             = useState(false)
 
   function switchMode(m: 'signin' | 'signup') {
     setMode(m)
     setError(null)
+    setConfirm('')
+    setUser('')
+    setAvatar('')
+    setAvatarEdited(false)
+  }
+
+  function handleUsernameChange(val: string) {
+    setUser(val)
+    if (!avatarEdited) {
+      setAvatar(val.replace(/\s/g, '').slice(0, 2).toUpperCase())
+    }
+  }
+
+  function handleAvatarChange(val: string) {
+    setAvatar(val.toUpperCase().slice(0, 2))
+    setAvatarEdited(true)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -53,11 +74,13 @@ export function AuthModal({ initialMode = 'signin', onClose }: Props) {
         const err = validateUsername(username)
         if (err) { setError(err); setLoading(false); return }
         if (password.length < 6) { setError('Password must be at least 6 characters.'); setLoading(false); return }
+        if (password !== confirm) { setError('Passwords do not match.'); setLoading(false); return }
 
+        const initials = avatarLetters || username.replace(/\s/g, '').slice(0, 2).toUpperCase()
         const { error: signUpErr } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { username } },
+          options: { data: { username, initials } },
         })
         if (signUpErr) throw signUpErr
       } else {
@@ -71,6 +94,19 @@ export function AuthModal({ initialMode = 'signin', onClose }: Props) {
       setLoading(false)
     }
   }
+
+  const EyeIcon = ({ open }: { open: boolean }) => open ? (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
+  ) : (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  )
 
   return (
     <div
@@ -96,10 +132,7 @@ export function AuthModal({ initialMode = 'signin', onClose }: Props) {
                 ? 'Open the WebComment extension in Chrome to get started.'
                 : 'Open the extension — your session is live.'}
             </p>
-            <button
-              onClick={onClose}
-              className="text-blue-500 hover:text-blue-400 text-sm transition-colors font-mono"
-            >
+            <button onClick={onClose} className="text-blue-500 hover:text-blue-400 text-sm transition-colors font-mono">
               // close
             </button>
           </div>
@@ -107,26 +140,17 @@ export function AuthModal({ initialMode = 'signin', onClose }: Props) {
           <>
             <div className="flex items-center justify-between mb-6">
               <div className="flex gap-1 bg-[#080808] border border-[#1e1e1e] rounded-lg p-1">
-                <button
-                  onClick={() => switchMode('signin')}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                    mode === 'signin'
-                      ? 'bg-[#1a1a1a] text-white'
-                      : 'text-zinc-600 hover:text-zinc-400'
-                  }`}
-                >
-                  Sign in
-                </button>
-                <button
-                  onClick={() => switchMode('signup')}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                    mode === 'signup'
-                      ? 'bg-[#1a1a1a] text-white'
-                      : 'text-zinc-600 hover:text-zinc-400'
-                  }`}
-                >
-                  Sign up
-                </button>
+                {(['signin', 'signup'] as const).map(m => (
+                  <button
+                    key={m}
+                    onClick={() => switchMode(m)}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                      mode === m ? 'bg-[#1a1a1a] text-white' : 'text-zinc-600 hover:text-zinc-400'
+                    }`}
+                  >
+                    {m === 'signin' ? 'Sign in' : 'Sign up'}
+                  </button>
+                ))}
               </div>
               <button
                 onClick={onClose}
@@ -137,17 +161,39 @@ export function AuthModal({ initialMode = 'signin', onClose }: Props) {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-3">
+
+              {/* Username + avatar preview tile */}
               {mode === 'signup' && (
-                <input
-                  type="text"
-                  placeholder="Username"
-                  value={username}
-                  onChange={e => setUser(e.target.value)}
-                  className={INPUT}
-                  required
-                  autoFocus
-                />
+                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-[#0c0c0c] border border-[#222]">
+                  <div className={`group w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors cursor-text ${
+                    avatarLetters
+                      ? 'bg-blue-600/20 has-[:focus]:ring-2 has-[:focus]:ring-blue-500/40 has-[:focus]:ring-offset-1 has-[:focus]:ring-offset-[#0c0c0c]'
+                      : 'border-2 border-dashed border-[#333] hover:border-[#444] has-[:focus]:border-blue-600 has-[:focus]:border-solid'
+                  }`}>
+                    <input
+                      type="text"
+                      value={avatarLetters}
+                      onChange={e => handleAvatarChange(e.target.value)}
+                      maxLength={2}
+                      placeholder="AB"
+                      className={`w-7 text-center font-bold text-[12px] bg-transparent focus:outline-none cursor-text ${
+                        avatarLetters ? 'text-blue-400' : 'text-transparent placeholder:text-zinc-700 placeholder:font-normal'
+                      }`}
+                      title="Edit initials"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Username"
+                    value={username}
+                    onChange={e => handleUsernameChange(e.target.value)}
+                    className="flex-1 text-sm font-medium bg-transparent focus:outline-none text-zinc-200 placeholder:font-normal placeholder:text-zinc-700 min-w-0"
+                    required
+                    autoFocus
+                  />
+                </div>
               )}
+
               <input
                 type="email"
                 placeholder="Email"
@@ -157,6 +203,8 @@ export function AuthModal({ initialMode = 'signin', onClose }: Props) {
                 required
                 autoFocus={mode === 'signin'}
               />
+
+              {/* Password */}
               <div className="relative">
                 <input
                   type={showPass ? 'text' : 'password'}
@@ -172,22 +220,33 @@ export function AuthModal({ initialMode = 'signin', onClose }: Props) {
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-300 transition-colors"
                   tabIndex={-1}
                 >
-                  {showPass ? (
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
-                      <line x1="1" y1="1" x2="23" y2="23" />
-                    </svg>
-                  ) : (
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  )}
+                  <EyeIcon open={showPass} />
                 </button>
               </div>
+
+              {/* Confirm password */}
               {mode === 'signup' && (
-                <p className="font-mono text-[10px] text-zinc-600 -mt-1 px-1">min. 6 characters</p>
+                <>
+                  <div className="relative">
+                    <input
+                      type={showPass ? 'text' : 'password'}
+                      placeholder="Confirm password"
+                      value={confirm}
+                      onChange={e => setConfirm(e.target.value)}
+                      className={INPUT + ' pr-10'}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPass(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-300 transition-colors"
+                      tabIndex={-1}
+                    >
+                      <EyeIcon open={showPass} />
+                    </button>
+                  </div>
+                  <p className="font-mono text-[10px] text-zinc-600 -mt-1 px-1">min. 6 characters</p>
+                </>
               )}
 
               {error && (
