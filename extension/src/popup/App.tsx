@@ -6,7 +6,6 @@ import arrowUpRightIcon from '@iconify-icons/lucide/arrow-up-right'
 import mapPinIcon       from '@iconify-icons/lucide/map-pin'
 import mapPinOffIcon    from '@iconify-icons/lucide/map-pin-off'
 import userIcon         from '@iconify-icons/lucide/user'
-import plusIcon         from '@iconify-icons/lucide/plus'
 import { supabase } from '../shared/supabase'
 import type { Profile } from '../shared/types'
 import { Button }   from './components/Button'
@@ -236,8 +235,8 @@ export function App() {
             onClick={handleNewComment}
             className="flex items-center justify-center gap-1.5"
           >
-            <Icon icon={plusIcon} width={14} height={14} />
             New comment
+            <span className="ml-1 text-[10px] opacity-50 font-normal">Alt+Shift+N</span>
           </Button>
         </div>
       )}

@@ -48,6 +48,24 @@ chrome.webNavigation.onCommitted.addListener((details) => {
   } catch { /* invalid URL */ }
 })
 
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command !== 'activate-pin-picker') return
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id || !tab.url) return
+  const url = tab.url
+  if (url.startsWith('chrome://') || url.startsWith('chrome-extension://') || url.startsWith('about:') || url.startsWith('edge://')) return
+  try {
+    await chrome.tabs.sendMessage(tab.id, { type: 'ACTIVATE_PIN_PICKER' })
+  } catch {
+    try {
+      const manifest = chrome.runtime.getManifest()
+      const files    = manifest.content_scripts?.[0]?.js ?? []
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files })
+      await chrome.tabs.sendMessage(tab.id, { type: 'ACTIVATE_PIN_PICKER' })
+    } catch { /* unsupported page */ }
+  }
+})
+
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.status !== 'complete') return
   if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) return
@@ -162,7 +180,7 @@ async function prepareCapture(pin: { x: number; y: number }): Promise<unknown> {
         comment_id:      commentId,
         pin_x:           pin.x,
         pin_y:           pin.y,
-        anchor_selector: pin.anchor_selector,
+        anchor_path:     pin.anchor_path,
         anchor_x:        pin.anchor_x,
         anchor_y:        pin.anchor_y,
         url:             tab.url,
@@ -188,7 +206,7 @@ async function finalizeComment(payload: FinalizePayload): Promise<unknown> {
         screenshot_path: pendingCapture.screenshot_path,
         pin_x:           pendingCapture.pin_x,
         pin_y:           pendingCapture.pin_y,
-        anchor_selector: pendingCapture.anchor_selector,
+        anchor_path:     pendingCapture.anchor_path,
         anchor_x:        pendingCapture.anchor_x,
         anchor_y:        pendingCapture.anchor_y,
         body:            payload.body,
@@ -266,7 +284,7 @@ async function showPinsForTab(tabId: number, rawUrl: string, targetCommentId?: s
     const [{ data: received }, { data: sent }] = await Promise.all([
       supabase.from('comment_inbox').select('*').eq('for_user_id', userId).in('url', urlSet).is('resolved_at', null),
       supabase.from('comments')
-        .select('id, url, body, screenshot_url, pin_x, pin_y, anchor_selector, anchor_x, anchor_y, created_at')
+        .select('id, url, body, screenshot_url, pin_x, pin_y, anchor_selector, anchor_path, anchor_x, anchor_y, tags, created_at')
         .eq('from_user_id', userId).in('url', urlSet),
     ])
 

@@ -90,7 +90,60 @@ chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) =
 // This is more reliable than relying on tabs.onUpdated timing.
 chrome.runtime.sendMessage({ type: 'CONTENT_READY' }).catch(() => { /* SW not yet awake, onUpdated will retry */ })
 
+// Alt+C (Option+C on Mac): activate pin picker when pins are visible on the current page
+// Use e.code to match the physical key regardless of OS modifier output
+document.addEventListener('keydown', e => {
+  if (e.altKey && e.code === 'KeyC') {
+    if (pinMap.size === 0) return
+    if (document.getElementById('webcomment-composer-host')) return
+    if (document.getElementById('webcomment-detail-host')) return
+    e.preventDefault()
+    activatePinPicker()
+  }
+})
+
 checkShareContext()
+
+// ---------------------------------------------------------------------------
+// SPA navigation — notify the SW when the URL changes so it can re-fetch
+// pins for the new URL. This does NOT control pin visibility (the interval
+// below handles that via DOM presence checks).
+// ---------------------------------------------------------------------------
+
+let _lastHref = location.href
+function onSpaNavigate() {
+  const href = location.href
+  if (href === _lastHref) return
+  _lastHref = href
+  setTimeout(() => chrome.runtime.sendMessage({ type: 'CONTENT_READY' }).catch(() => {}), 100)
+}
+window.addEventListener('popstate',   onSpaNavigate)
+window.addEventListener('hashchange', onSpaNavigate)
+const _origPush    = history.pushState.bind(history)
+const _origReplace = history.replaceState.bind(history)
+history.pushState    = function (...args) { _origPush(...args);    onSpaNavigate() }
+history.replaceState = function (...args) { _origReplace(...args); onSpaNavigate() }
+
+// ---------------------------------------------------------------------------
+// DOM anchor check — polls every 800 ms. If the anchor element is gone or
+// hidden (SPA view change), hides the pin. Shows it again when it reappears.
+// Avoids MutationObserver self-trigger pitfall.
+// ---------------------------------------------------------------------------
+
+setInterval(() => {
+  if (pinMap.size === 0) return
+  pinMap.forEach((comment, pin) => {
+    const pos = resolvePinPosition(comment)
+    if (!pos && pin.style.display !== 'none') {
+      pin.style.display = 'none'
+      document.getElementById('webcomment-detail-host')?.remove()
+    } else if (pos && pin.style.display === 'none') {
+      pin.style.left    = `${pos.docX}px`
+      pin.style.top     = `${pos.docY}px`
+      pin.style.display = 'flex'
+    }
+  })
+}, 800)
 
 // ---------------------------------------------------------------------------
 // Pin picker
@@ -112,17 +165,17 @@ async function onPinClick(e: MouseEvent) {
   const x = (e.clientX / window.innerWidth)  * 100
   const y = (e.clientY / window.innerHeight) * 100
 
-  // DOM anchor: selector of clicked element + offset inside it
-  const target          = e.target as Element
-  const anchor_selector = getSelector(target)
-  const rect            = target.getBoundingClientRect()
-  const anchor_x        = rect.width  > 0 ? ((e.clientX - rect.left) / rect.width)  * 100 : 50
-  const anchor_y        = rect.height > 0 ? ((e.clientY - rect.top)  / rect.height) * 100 : 50
+  // DOM anchor: rich path of clicked element + relative offset inside it
+  const target      = e.target as Element
+  const anchor_path = JSON.stringify(getDomPath(target))
+  const rect        = target.getBoundingClientRect()
+  const anchor_x    = rect.width  > 0 ? ((e.clientX - rect.left) / rect.width)  * 100 : 50
+  const anchor_y    = rect.height > 0 ? ((e.clientY - rect.top)  / rect.height) * 100 : 50
 
   // Capture screenshot before showing the overlay
   const res = await chrome.runtime.sendMessage({
     type: 'PREPARE_CAPTURE',
-    payload: { x, y, anchor_selector, anchor_x, anchor_y },
+    payload: { x, y, anchor_path, anchor_x, anchor_y },
   }) as { ok?: boolean; error?: string }
 
   if (!res?.ok) {
@@ -224,8 +277,13 @@ function showComposerOverlay(pinX: number, pinY: number) {
         background: none; border: 1px solid #e2e8f0; border-radius: 7px;
         padding: 6px 12px; font-size: 12px; color: #64748b; cursor: pointer;
         font-family: inherit; transition: background 0.1s;
+        display: flex; align-items: center; gap: 5px;
       }
       #cancel:hover { background: #f8fafc; }
+      .kbd {
+        font-size: 10px; opacity: 0.55; background: rgba(0,0,0,0.06);
+        border-radius: 3px; padding: 1px 4px; font-family: inherit;
+      }
       #send {
         background: #2563EB; color: #fff; border: none; border-radius: 7px;
         padding: 6px 14px; font-size: 12px; font-weight: 500; cursor: pointer;
@@ -271,8 +329,8 @@ function showComposerOverlay(pinX: number, pinY: number) {
       <div id="footer">
         ${PUBLIC_MODE ? `<label id="public-label"><div id="public-switch"><div id="public-thumb"></div></div>Public</label>` : ''}
         <span id="status"></span>
-        <button id="cancel">Cancel</button>
-        <button id="send" style="display:flex;align-items:center;gap:5px;">Send ${SVG_SEND}</button>
+        <button id="cancel">Cancel <span class="kbd">Esc</span></button>
+        <button id="send" style="display:flex;align-items:center;gap:5px;">Send <span class="kbd">⇧↵</span></button>
       </div>
     </div>
   `
@@ -383,7 +441,8 @@ function showComposerOverlay(pinX: number, pinY: number) {
         closeAt(); return
       }
     }
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) send()
+    if (e.key === 'Escape') { close(); return }
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey || e.shiftKey)) { e.preventDefault(); send() }
   })
 
   msgInput.addEventListener('blur', () => setTimeout(closeAt, 150))
@@ -562,7 +621,7 @@ async function showPinDetail(comment: CommentInboxItem, pinEl: HTMLElement) {
           <div id="username">${escapeHtml(comment.from_username)}</div>
           <div id="date">${escapeHtml(formattedDate)}</div>
         </div>
-        <button id="close-btn">${SVG_X}</button>
+        <button id="close-btn" title="Esc">${SVG_X}</button>
       </div>
       <div id="body-text">${renderTaggedBody(comment.body)}</div>
       ${hasActions ? `
@@ -612,8 +671,11 @@ async function showPinDetail(comment: CommentInboxItem, pinEl: HTMLElement) {
   const closeBtn = shadow.getElementById('close-btn')!
   function close() {
     window.removeEventListener('scroll', repositionPanel)
+    document.removeEventListener('keydown', onEsc)
     host.remove()
   }
+  function onEsc(e: KeyboardEvent) { if (e.key === 'Escape') close() }
+  document.addEventListener('keydown', onEsc)
   backdrop.addEventListener('click', close)
   closeBtn.addEventListener('click', close)
 
@@ -676,24 +738,24 @@ function showPins(comments: CommentInboxItem[], targetCommentId?: string) {
   if (comments.length === 0) return
 
   comments.forEach((comment, index) => {
-    const { docX, docY } = resolvePinPosition(comment)
+    const pos = resolvePinPosition(comment)
 
     const pin = buildPinElement(comment)
     pinMap.set(pin, comment)
-    pin.dataset.anchorSelector = comment.anchor_selector ?? ''
-    pin.dataset.anchorX        = String(comment.anchor_x ?? 50)
-    pin.dataset.anchorY        = String(comment.anchor_y ?? 50)
-    pin.dataset.pinX           = String(comment.pin_x)
-    pin.dataset.pinY           = String(comment.pin_y)
-    pin.dataset.label          = `${comment.from_username}: ${comment.body}`
-    pin.style.left             = `${docX}px`
-    pin.style.top              = `${docY}px`
+    pin.dataset.label = `${comment.from_username}: ${comment.body}`
+    if (pos) {
+      pin.style.left    = `${pos.docX}px`
+      pin.style.top     = `${pos.docY}px`
+    } else {
+      pin.style.display = 'none'  // anchor not ready yet; interval will restore when ready
+    }
 
     let tooltip: HTMLDivElement | null = null
 
     pin.addEventListener('mouseenter', () => {
       if (document.getElementById('webcomment-detail-host')) return
-      const pos = getPinDocPosition(pin)
+      const pos = resolvePinPosition(comment)
+      if (!pos) return
       tooltip = document.createElement('div')
       Object.assign(tooltip.style, {
         position: 'absolute', left: `${pos.docX + 14}px`, top: `${pos.docY - 10}px`,
@@ -743,91 +805,194 @@ function showPins(comments: CommentInboxItem[], targetCommentId?: string) {
       }
     }
   }
+
 }
 
 function repositionPins() {
-  document.querySelectorAll<HTMLElement>('[data-webcomment-pin]').forEach(pin => {
-    const { docX, docY } = getPinDocPosition(pin)
-    pin.style.left = `${docX}px`
-    pin.style.top  = `${docY}px`
+  pinMap.forEach((comment, pin) => {
+    const pos = resolvePinPosition(comment)
+    if (!pos) { pin.style.display = 'none'; return }
+    pin.style.display = 'flex'
+    pin.style.left    = `${pos.docX}px`
+    pin.style.top     = `${pos.docY}px`
   })
 }
 
-function getPinDocPosition(pin: HTMLElement): { docX: number; docY: number } {
-  const selector = pin.dataset.anchorSelector ?? ''
-  const anchorX  = parseFloat(pin.dataset.anchorX ?? '50')
-  const anchorY  = parseFloat(pin.dataset.anchorY ?? '50')
-  const pinX     = parseFloat(pin.dataset.pinX ?? '50')
-  const pinY     = parseFloat(pin.dataset.pinY ?? '50')
+// ---------------------------------------------------------------------------
+// Rich DOM path — anchor system
+// ---------------------------------------------------------------------------
 
-  if (selector) {
-    try {
-      const el = document.querySelector(selector)
-      if (el) {
-        const rect = el.getBoundingClientRect()
-        return {
-          docX: rect.left + window.scrollX + (anchorX / 100) * rect.width,
-          docY: rect.top  + window.scrollY + (anchorY / 100) * rect.height,
-        }
-      }
-    } catch { /* invalid selector → fallback */ }
-  }
-  return {
-    docX: (pinX / 100) * window.innerWidth,
-    docY: (pinY / 100) * window.innerHeight,
-  }
+interface PathNode {
+  tag:        string
+  nth:        number
+  id?:        string
+  dataAttrs?: Record<string, string>
+  role?:      string
+  ariaLabel?: string
+  classes?:   string[]
 }
 
-function resolvePinPosition(comment: CommentInboxItem): { docX: number; docY: number } {
+interface DomPath {
+  nodes: PathNode[]
+  text?: string
+}
+
+function isStableClass(cls: string): boolean {
+  return !/\d{3,}/.test(cls) && !/^(css-|sc-|jss|mui|makeStyles|go-)/.test(cls)
+}
+
+function isGeneratedId(id: string): boolean {
+  return /:\w+:/.test(id) || /^:/.test(id) || /^\d+$/.test(id)
+}
+
+function buildPathNode(el: Element): PathNode {
+  const tag    = el.tagName.toLowerCase()
+  const parent = el.parentElement
+  const nth    = parent
+    ? Array.from(parent.children).filter(s => s.tagName === el.tagName).indexOf(el) + 1
+    : 1
+  const node: PathNode = { tag, nth }
+
+  if (el.id && !isGeneratedId(el.id)) node.id = el.id
+
+  for (const attr of ['data-testid', 'data-cy', 'data-qa', 'data-id', 'data-key', 'data-name']) {
+    const val = el.getAttribute(attr)
+    if (val) node.dataAttrs = { ...node.dataAttrs, [attr]: val }
+  }
+
+  const role = el.getAttribute('role')
+  if (role) node.role = role
+
+  const ariaLabel = el.getAttribute('aria-label')
+  if (ariaLabel) node.ariaLabel = ariaLabel
+
+  const stableClasses = Array.from(el.classList).filter(isStableClass)
+  if (stableClasses.length) node.classes = stableClasses.slice(0, 5)
+
+  return node
+}
+
+function getDomPath(el: Element): DomPath {
+  const MAX_DEPTH = 15
+  const nodes: PathNode[] = []
+  let cur: Element | null = el
+
+  for (let d = 0; d < MAX_DEPTH && cur && cur !== document.documentElement; d++) {
+    const node = buildPathNode(cur)
+    nodes.unshift(node)
+    if (node.id) break
+    cur = cur.parentElement
+  }
+
+  const text = (el as HTMLElement).innerText?.trim().slice(0, 80) || undefined
+  return { nodes, text }
+}
+
+function scoreNode(el: Element, node: PathNode): number {
+  if (node.id && el.id !== node.id) return 0
+
+  let score = node.id ? 100 : 0
+
+  if (node.dataAttrs) {
+    for (const [k, v] of Object.entries(node.dataAttrs)) {
+      if (el.getAttribute(k) === v) score += 50
+    }
+  }
+  if (node.role      && el.getAttribute('role')       === node.role)      score += 20
+  if (node.ariaLabel && el.getAttribute('aria-label') === node.ariaLabel) score += 20
+  for (const cls of node.classes ?? []) {
+    if (el.classList.contains(cls)) score += 10
+  }
+  const parent = el.parentElement
+  if (parent) {
+    const siblings = Array.from(parent.children).filter(s => s.tagName === el.tagName)
+    if (siblings.indexOf(el) + 1 === node.nth) score += 5
+  }
+  return score + 1
+}
+
+function findElementByPath(path: DomPath): Element | null {
+  const { nodes, text } = path
+  if (!nodes.length) return null
+
+  const first = nodes[0]
+  let candidates: Element[]
+
+  if (first.id) {
+    const el = document.getElementById(first.id)
+    candidates = el ? [el] : []
+  } else {
+    candidates = Array.from(document.querySelectorAll(first.tag))
+      .filter(el => scoreNode(el, first) > 1)
+  }
+
+  for (let i = 1; i < nodes.length; i++) {
+    const node = nodes[i]
+    const next: Element[] = []
+    for (const parent of candidates) {
+      const children = Array.from(parent.children)
+        .filter(c => c.tagName.toLowerCase() === node.tag)
+      const scored = children
+        .map(c => ({ el: c, score: scoreNode(c, node) }))
+        .filter(s => s.score > 1)
+      if (scored.length) {
+        scored.sort((a, b) => b.score - a.score)
+        next.push(scored[0].el)
+      }
+    }
+    candidates = next
+    if (!candidates.length) return null
+  }
+
+  // Text fingerprint: mandatory validation, not just a tie-breaker.
+  // Prevents returning a structurally-similar element from a different SPA view.
+  // If a fingerprint was captured and no candidate has matching text → wrong view → null.
+  if (text) {
+    const fingerprint = text.slice(0, 40)
+    return candidates.find(el =>
+      (el as HTMLElement).innerText?.trim().slice(0, 40) === fingerprint
+    ) ?? null
+  }
+
+  return candidates[0] ?? null
+}
+
+function isElVisible(el: Element): boolean {
+  const rect = el.getBoundingClientRect()
+  if (rect.width === 0 && rect.height === 0) return false
+  if (!(el as HTMLElement).checkVisibility?.()) return false
+  return true
+}
+
+function resolvePinPosition(comment: CommentInboxItem): { docX: number; docY: number } | null {
+  if (comment.anchor_path) {
+    try {
+      const path: DomPath = JSON.parse(comment.anchor_path)
+      const el = findElementByPath(path)
+      if (!el || !isElVisible(el)) return null
+      const rect = el.getBoundingClientRect()
+      return {
+        docX: rect.left + window.scrollX + ((comment.anchor_x ?? 50) / 100) * rect.width,
+        docY: rect.top  + window.scrollY + ((comment.anchor_y ?? 50) / 100) * rect.height,
+      }
+    } catch { return null }
+  }
+  // Legacy CSS selector fallback for old comments
   if (comment.anchor_selector) {
     try {
       const el = document.querySelector(comment.anchor_selector)
-      if (el) {
-        const rect = el.getBoundingClientRect()
-        return {
-          docX: rect.left + window.scrollX + ((comment.anchor_x ?? 50) / 100) * rect.width,
-          docY: rect.top  + window.scrollY + ((comment.anchor_y ?? 50) / 100) * rect.height,
-        }
+      if (!el || !isElVisible(el)) return null
+      const rect = el.getBoundingClientRect()
+      return {
+        docX: rect.left + window.scrollX + ((comment.anchor_x ?? 50) / 100) * rect.width,
+        docY: rect.top  + window.scrollY + ((comment.anchor_y ?? 50) / 100) * rect.height,
       }
-    } catch { /* invalid selector → fallback */ }
+    } catch { return null }
   }
   return {
-    docX: (comment.pin_x / 100) * window.innerWidth,
-    docY: (comment.pin_y / 100) * window.innerHeight,
+    docX: (comment.pin_x / 100) * window.innerWidth  + window.scrollX,
+    docY: (comment.pin_y / 100) * window.innerHeight + window.scrollY,
   }
-}
-
-// Generate a stable, minimal CSS selector for an element
-function getSelector(el: Element): string {
-  const MAX_DEPTH = 6
-  const parts: string[] = []
-  let current: Element | null = el
-
-  for (let depth = 0; depth < MAX_DEPTH && current && current !== document.documentElement; depth++) {
-    if (current.id && !/^\d/.test(current.id)) {
-      parts.unshift(`#${CSS.escape(current.id)}`)
-      break
-    }
-
-    const tag    = current.tagName.toLowerCase()
-    const parent = current.parentElement
-
-    if (!parent || current === document.body) {
-      parts.unshift(tag)
-      break
-    }
-
-    const siblings = Array.from(parent.children).filter(s => s.tagName === current!.tagName)
-    if (siblings.length > 1) {
-      parts.unshift(`${tag}:nth-of-type(${siblings.indexOf(current as Element) + 1})`)
-    } else {
-      parts.unshift(tag)
-    }
-
-    current = parent
-  }
-
-  return parts.join(' > ')
 }
 
 // ---------------------------------------------------------------------------

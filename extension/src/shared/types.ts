@@ -19,6 +19,7 @@ export interface CommentInboxItem {
   pin_x:           number
   pin_y:           number
   anchor_selector: string | null
+  anchor_path:     string | null
   anchor_x:        number | null
   anchor_y:        number | null
   body:            string
@@ -30,11 +31,11 @@ export interface CommentInboxItem {
 }
 
 export interface PinPosition {
-  x:               number
-  y:               number
-  anchor_selector: string
-  anchor_x:        number
-  anchor_y:        number
+  x:           number
+  y:           number
+  anchor_path: string
+  anchor_x:    number
+  anchor_y:    number
 }
 
 export interface SentComment {

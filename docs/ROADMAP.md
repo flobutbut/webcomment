@@ -160,6 +160,7 @@ Public mode allows displaying comments visible to all extension users on the sam
   - UI: replies section under the message in the overlay panel and popup detail
   - Realtime: subscription on `comment_replies` for comments visible on the page
 - [ ] Multi-pin overlay on the same page (list of comments on the current page)
+- [ ] **Spatio-temporal pins on video** — if the DOM target is a native `<video>` element, capture `currentTime` as a `timecode` field alongside the XY ratio; on playback, the pin fades in ~5 s before its timecode, animates at the exact moment, and fades out ~5 s after (via `timeupdate` listener); pin changes color when the user scrubs manually to that timecode; option to pause on the timecode available in pin detail. Cross-origin iframes (YouTube, Vimeo embed) not supported in first iteration.
 - [ ] Improve CSS selector robustness on SPAs (React, Vue) — dynamic classes
 - [ ] Inbox filters: unread, by URL
 - [ ] Expired signed URL regeneration (`get-signed-url`)

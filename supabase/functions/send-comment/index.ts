@@ -16,6 +16,7 @@ interface SendCommentBody {
   screenshot_path: string
   pin_x:           number
   pin_y:           number
+  anchor_path?:     string
   anchor_selector?: string
   anchor_x?:        number
   anchor_y?:        number
@@ -43,7 +44,7 @@ Deno.serve(async (req) => {
   if (authError || !user) return new Response('Unauthorized', { status: 401 })
 
   const body: SendCommentBody = await req.json()
-  const { comment_id, url, screenshot_path, pin_x, pin_y, anchor_selector, anchor_x, anchor_y, to } = body
+  const { comment_id, url, screenshot_path, pin_x, pin_y, anchor_path, anchor_selector, anchor_x, anchor_y, to } = body
 
   const tags = [...new Set([...body.body.matchAll(/#([A-Za-z0-9_]+)/g)].map(m => m[1].toLowerCase()))]
 
@@ -64,6 +65,7 @@ Deno.serve(async (req) => {
       screenshot_path,
       pin_x,
       pin_y,
+      anchor_path:     anchor_path     ?? null,
       anchor_selector: anchor_selector ?? null,
       anchor_x:        anchor_x        ?? null,
       anchor_y:        anchor_y        ?? null,
