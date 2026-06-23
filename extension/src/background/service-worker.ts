@@ -11,6 +11,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
 let currentSession: Session | null = null
 let realtimeChannel: ReturnType<typeof supabase.channel> | null = null
+let realtimeInitialized = false
 
 // ---------------------------------------------------------------------------
 // Top-level listeners (required for MV3)
@@ -92,8 +93,20 @@ chrome.storage.local.get('session', async ({ session }) => {
   if (!error && data.session) {
     currentSession = data.session
     chrome.storage.local.set({ session: data.session })
-    subscribeToInbox(data.session.user.id)
+    if (!realtimeInitialized) {
+      realtimeInitialized = true
+      subscribeToInbox(data.session.user.id)
+    }
     supabase.functions.invoke('cleanup-screenshots')
+    // After session is ready, push pins to the active tab.
+    // Covers the race where CONTENT_READY arrived before currentSession was set.
+    const { pinsVisible } = await chrome.storage.local.get('pinsVisible')
+    if (pinsVisible !== false) {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+      if (tab?.id && tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('chrome-extension://') && !tab.url.startsWith('about:')) {
+        showPinsForTab(tab.id, tab.url).catch(() => {})
+      }
+    }
   }
 })
 
@@ -104,7 +117,10 @@ chrome.storage.onChanged.addListener((changes, area) => {
     supabase.auth.setSession(newSession).then(({ data, error }) => {
       if (!error && data.session) {
         currentSession = data.session
-        subscribeToInbox(data.session.user.id)
+        if (!realtimeInitialized) {
+          realtimeInitialized = true
+          subscribeToInbox(data.session.user.id)
+        }
       }
     })
   }
@@ -114,8 +130,12 @@ supabase.auth.onAuthStateChange((event, session) => {
   currentSession = session
   if (session) {
     chrome.storage.local.set({ session })
-    subscribeToInbox(session.user.id)
+    if (!realtimeInitialized) {
+      realtimeInitialized = true
+      subscribeToInbox(session.user.id)
+    }
   } else {
+    realtimeInitialized = false
     chrome.storage.local.remove(['session', 'profile'])
     realtimeChannel?.unsubscribe()
     realtimeChannel = null
@@ -551,7 +571,16 @@ function subscribeToInbox(userId: string) {
         })
       }
     )
-    .subscribe()
+    .subscribe((status, err) => {
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.error('[Realtime] channel error:', err ?? status)
+        realtimeInitialized = false
+        setTimeout(() => {
+          realtimeInitialized = true
+          subscribeToInbox(userId)
+        }, 5000)
+      }
+    })
 
   updateBadge(userId)
 }

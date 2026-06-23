@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { Icon } from '@iconify/react'
-import checkIcon        from '@iconify-icons/lucide/check'
-import arrowUpRightIcon from '@iconify-icons/lucide/arrow-up-right'
 import mapPinIcon       from '@iconify-icons/lucide/map-pin'
 import mapPinOffIcon    from '@iconify-icons/lucide/map-pin-off'
 import userIcon         from '@iconify-icons/lucide/user'
@@ -27,7 +25,6 @@ export function App() {
   const [profile,             setProfile]             = useState<Profile | null>(null)
   const [tab,                 setTab]                 = useState<Tab>('inbox')
   const [settings,            setSettings]            = useState(false)
-  const [copied,              setCopied]              = useState(false)
   const [loading,             setLoading]             = useState(true)
   const [newCommentErr,       setNewCommentErr]       = useState<string | null>(null)
   const [pinsVisible,         setPinsVisible]         = useState(false)
@@ -135,21 +132,6 @@ export function App() {
     window.close()
   }
 
-  async function handleShare() {
-    if (!session) return
-    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true })
-    if (!activeTab?.url) return
-
-    const { data, error } = await supabase.functions.invoke('create-share-link', {
-      body: { url: activeTab.url, scope: 'page' },
-    })
-    if (error || !data?.share_url) return
-
-    await navigator.clipboard.writeText(data.share_url as string)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
   if (loading) {
     return (
       <div className="w-full h-full flex items-center justify-center">
@@ -167,18 +149,6 @@ export function App() {
       <div className="flex items-center justify-between px-4 border-b border-gray-100 h-12 flex-shrink-0">
         <span className="font-semibold text-blue-600 text-[14px] tracking-tight">WebComment</span>
         <div className="flex items-center gap-1.5">
-          <button
-            onClick={handleShare}
-            title="Share this page"
-            className={`flex items-center gap-1 px-2.5 py-1 text-[12px] rounded-md transition-colors duration-150 border ${
-              copied
-                ? 'border-green-200 bg-green-50 text-green-600'
-                : 'border-gray-200 text-gray-500 hover:text-blue-600 hover:border-blue-300'
-            }`}
-          >
-            <Icon icon={copied ? checkIcon : arrowUpRightIcon} width={12} height={12} />
-            {copied ? 'Copied' : 'Share'}
-          </button>
           <button
             onClick={togglePins}
             title={pinsVisible ? 'Hide comments' : 'Show comments on the page'}

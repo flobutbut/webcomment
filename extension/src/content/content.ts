@@ -4,6 +4,18 @@ import { avatarColor, avatarInitials } from '../shared/utils'
 
 const PUBLIC_MODE = import.meta.env.VITE_PUBLIC_MODE_ENABLED !== 'false'
 
+async function safeSendMessage(message: Message): Promise<unknown> {
+  try {
+    return await chrome.runtime.sendMessage(message)
+  } catch (err) {
+    const text = (err as Error)?.message ?? ''
+    if (text.includes('Extension context invalidated') || text.includes('Receiving end does not exist')) {
+      return null
+    }
+    throw err
+  }
+}
+
 // Inline Lucide SVGs — used in the Shadow DOM (no React available here)
 const SVG_X    = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`
 const SVG_SEND = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>`
@@ -59,7 +71,7 @@ function renderInitials(el: HTMLElement, username: string, initials?: string | n
 
 // Prevent duplicate listeners if the script is re-injected
 if ((window as unknown as Record<string, unknown>).__webcomment_injected) {
-  chrome.runtime.sendMessage({ type: 'ACTIVATE_PIN_PICKER' })
+  safeSendMessage({ type: 'ACTIVATE_PIN_PICKER' })
 } else {
   (window as unknown as Record<string, unknown>).__webcomment_injected = true
   init()
@@ -90,7 +102,7 @@ chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) =
 
 // Tell the SW we're ready — it will push SHOW_PINS if pinsVisible is on.
 // This is more reliable than relying on tabs.onUpdated timing.
-chrome.runtime.sendMessage({ type: 'CONTENT_READY' }).catch(() => { /* SW not yet awake, onUpdated will retry */ })
+safeSendMessage({ type: 'CONTENT_READY' })
 
 // Alt+C (Option+C on Mac): activate pin picker when pins are visible on the current page
 // Use e.code to match the physical key regardless of OS modifier output
@@ -117,7 +129,7 @@ function onSpaNavigate() {
   const href = location.href
   if (href === _lastHref) return
   _lastHref = href
-  setTimeout(() => chrome.runtime.sendMessage({ type: 'CONTENT_READY' }).catch(() => {}), 100)
+  setTimeout(() => safeSendMessage({ type: 'CONTENT_READY' }), 100)
 }
 window.addEventListener('popstate',   onSpaNavigate)
 window.addEventListener('hashchange', onSpaNavigate)
@@ -175,7 +187,7 @@ async function onPinClick(e: MouseEvent) {
   const anchor_y    = rect.height > 0 ? ((e.clientY - rect.top)  / rect.height) * 100 : 50
 
   // Capture screenshot before showing the overlay
-  const res = await chrome.runtime.sendMessage({
+  const res = await safeSendMessage({
     type: 'PREPARE_CAPTURE',
     payload: { x, y, anchor_path, anchor_x, anchor_y },
   }) as { ok?: boolean; error?: string }
@@ -418,7 +430,7 @@ function showComposerOverlay(pinX: number, pinY: number) {
     atStart = cursor - match[0].length
     if (!query) { closeAt(); return }
     atSearchTimer = setTimeout(async () => {
-      const res = await chrome.runtime.sendMessage({
+      const res = await safeSendMessage({
         type: 'SEARCH_USERS', payload: { query },
       }) as { users?: { id: string; username: string; email: string }[] }
       atUsers = res?.users ?? []
@@ -463,7 +475,7 @@ function showComposerOverlay(pinX: number, pinY: number) {
 
     const mentionedIds: { type: 'user'; id: string }[] = []
     for (const name of mentionedNames) {
-      const res = await chrome.runtime.sendMessage({
+      const res = await safeSendMessage({
         type: 'SEARCH_USERS', payload: { query: name },
       }) as { users?: { id: string; username: string; email: string }[] }
       const found = res?.users?.find(u => u.username.toLowerCase() === name)
@@ -477,7 +489,7 @@ function showComposerOverlay(pinX: number, pinY: number) {
 
     // No recipient and not public → personal note
     if (!to.length) {
-      const sessionRes = await chrome.runtime.sendMessage({ type: 'GET_SESSION' }) as { session?: { user: { id: string } } }
+      const sessionRes = await safeSendMessage({ type: 'GET_SESSION' }) as { session?: { user: { id: string } } }
       const userId = sessionRes?.session?.user?.id
       if (userId) {
         to.push({ type: 'user', id: userId })
@@ -490,7 +502,7 @@ function showComposerOverlay(pinX: number, pinY: number) {
     sendBtn.disabled     = true
     statusEl.textContent = ''
 
-    const res = await chrome.runtime.sendMessage({
+    const res = await safeSendMessage({
       type: 'FINALIZE_COMMENT',
       payload: { body, to },
     }) as { success?: boolean; error?: string }
@@ -533,7 +545,7 @@ async function showPinDetail(comment: CommentInboxItem, pinEl: HTMLElement) {
   if (top < MARGIN) top = MARGIN
   if (top + 380 > window.innerHeight - MARGIN) top = window.innerHeight - 380 - MARGIN
 
-  const sessionRes    = await chrome.runtime.sendMessage({ type: 'GET_SESSION' }) as { session?: { user: { id: string } } }
+  const sessionRes    = await safeSendMessage({ type: 'GET_SESSION' }) as { session?: { user: { id: string } } }
   const currentUserId = sessionRes?.session?.user?.id
 
   const recipientId = (comment as CommentInboxItem & { recipient_id?: string }).recipient_id
@@ -703,7 +715,7 @@ async function showPinDetail(comment: CommentInboxItem, pinEl: HTMLElement) {
 
   dismissBtn?.addEventListener('click', async () => {
     dismissBtn.disabled = true
-    const res = await chrome.runtime.sendMessage({
+    const res = await safeSendMessage({
       type: 'RESOLVE_COMMENT',
       payload: { recipientId: recipientId! },
     }) as { error?: string }
@@ -732,7 +744,7 @@ async function showPinDetail(comment: CommentInboxItem, pinEl: HTMLElement) {
 
   confirmDelete?.addEventListener('click', async () => {
     if (confirmDelete) confirmDelete.disabled = true
-    const res = await chrome.runtime.sendMessage({
+    const res = await safeSendMessage({
       type: 'DELETE_COMMENT',
       payload: { commentId: comment.comment_id },
     }) as { success?: boolean; error?: string }
@@ -904,7 +916,7 @@ async function showUserProfile(comment: CommentInboxItem, pinEl: HTMLElement) {
     isCurrentUser?: boolean
     error?: string
   }
-  const res = await chrome.runtime.sendMessage({
+  const res = await safeSendMessage({
     type: 'GET_USER_PROFILE',
     payload: { userId: comment.from_user_id },
   }) as ProfileResult
@@ -933,7 +945,7 @@ async function showUserProfile(comment: CommentInboxItem, pinEl: HTMLElement) {
         <div class="ci-body">${escapeHtml(c.body)}</div>
       `
       el.addEventListener('click', () => {
-        chrome.runtime.sendMessage({
+        safeSendMessage({
           type: 'NAVIGATE_TO_COMMENT',
           payload: { commentId: c.comment_id, url: c.url },
         })
@@ -956,7 +968,7 @@ async function showUserProfile(comment: CommentInboxItem, pinEl: HTMLElement) {
     addContactBtn.addEventListener('click', async () => {
       addContactBtn.disabled = true
       addContactBtn.textContent = '…'
-      const addRes = await chrome.runtime.sendMessage({
+      const addRes = await safeSendMessage({
         type: 'ADD_CONTACT',
         payload: { addresseeId: comment.from_user_id! },
       }) as { success?: boolean; error?: string }
