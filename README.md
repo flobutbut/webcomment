@@ -30,9 +30,26 @@ The screenshot is the primary content. The live page is a bonus.
 
 ## Installation (developer mode)
 
-The extension is not yet published on any store. Load it directly from the built source.
+The extension is not yet published on any store. Download the latest build from [Releases](https://github.com/flobutbut/webcomment/releases/latest) or build from source.
 
-### Prerequisites
+### Chrome / Edge
+
+1. Download `webcomment-vX.X.X.zip` from [Releases](https://github.com/flobutbut/webcomment/releases/latest) and unzip it
+2. Go to `chrome://extensions` (or `edge://extensions`)
+3. Enable **Developer mode** (toggle, top-right)
+4. Click **Load unpacked**
+5. Select the unzipped `dist/` folder
+
+### Firefox
+
+1. Download `webcomment-vX.X.X.zip` from [Releases](https://github.com/flobutbut/webcomment/releases/latest) and unzip it
+2. Go to `about:debugging#/runtime/this-firefox`
+3. Click **Load Temporary Add-on…**
+4. Navigate to the unzipped `dist/` folder and select `manifest.json`
+
+> Firefox loads the extension as a temporary add-on — it is removed when the browser is closed. Re-load it from `about:debugging` after each restart.
+
+### Build from source
 
 ```bash
 cd extension
@@ -40,20 +57,7 @@ npm install
 npm run build   # outputs to extension/dist/
 ```
 
-### Chrome / Edge
-
-1. Go to `chrome://extensions` (or `edge://extensions`)
-2. Enable **Developer mode** (toggle, top-right)
-3. Click **Load unpacked**
-4. Select the `extension/dist/` folder
-
-### Firefox
-
-1. Go to `about:debugging#/runtime/this-firefox`
-2. Click **Load Temporary Add-on…**
-3. Navigate to `extension/dist/` and select `manifest.json`
-
-> Firefox loads the extension as a temporary add-on — it is removed when the browser is closed. Re-load it from `about:debugging` after each restart.
+Then follow the steps above using the generated `dist/` folder directly.
 
 ---
 
