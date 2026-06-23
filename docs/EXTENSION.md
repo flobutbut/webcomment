@@ -129,22 +129,25 @@ service-worker.ts
 
 type Message =
   | { type: 'ACTIVATE_PIN_PICKER' }
-  | { type: 'PIN_SELECTED';          payload: PinPosition }
   | { type: 'PREPARE_CAPTURE';       payload: PinPosition }
   | { type: 'FINALIZE_COMMENT';      payload: FinalizePayload }
-  | { type: 'CAPTURE_AND_SEND';      payload: SendPayload }
   | { type: 'SEARCH_USERS';          payload: { query: string } }
-  | { type: 'SHOW_PINS';             payload: { comments: CommentInboxItem[] } }
+  | { type: 'SHOW_PINS';             payload: { comments: CommentInboxItem[]; targetCommentId?: string } }
   | { type: 'MARK_READ';             payload: { recipientId: string } }
-  | { type: 'RESOLVE_COMMENT';       payload: { recipientId: string } }
+  | { type: 'RESOLVE_COMMENT';       payload: { recipientId: string } }    // "Dismiss" in the UI
   | { type: 'DELETE_COMMENT';        payload: { commentId: string } }
   | { type: 'GET_SESSION' }
   | { type: 'ACTIVATE_ERROR_SCREEN'; payload: CommentInboxItem }
   | { type: 'SHARE_CONTEXT_ACTIVE';  payload: ShareContext }
+  | { type: 'CONTENT_READY' }
+  | { type: 'REFRESH_PINS';          payload: { visible: boolean } }
+  | { type: 'UPDATE_BADGE' }
+  | { type: 'GET_USER_PROFILE';      payload: { userId: string } }         // profile overlay data
+  | { type: 'ADD_CONTACT';           payload: { addresseeId: string } }    // send contact request
+  | { type: 'NAVIGATE_TO_COMMENT';   payload: { commentId: string; url: string } } // open in new tab
 
 type RecipientEntry =
-  | { type: 'user' | 'group'; id: string }
-  | { type: 'email'; email: string }
+  | { type: 'user'; id: string }
   | { type: 'public' }
 
 interface FinalizePayload {
@@ -187,16 +190,50 @@ Injected into the page via Shadow DOM to avoid CSS conflicts.
 ```
 Each pin = a circle positioned absolutely on the page
 On hover : lightweight tooltip (name + start of message)
-On click  : detail panel in Shadow DOM (avatar, date, message body)
-            + actions based on permissions:
-              - "Resolve" (if recipient_id present AND not yet resolved)
-              - "Delete" (if from_user_id === current user)
-              Deletion requires confirmation before acting.
+On click  : detail panel (see below)
 ```
 
 Position recalculated when the window is resized.
 
-**Detail panel** — positioned to the right of the pin (or left if no space), white background, isolated Shadow DOM. Closes by clicking outside or on the X. "Resolve" and "Delete" actions send `RESOLVE_COMMENT` and `DELETE_COMMENT` respectively to the service worker, which automatically refreshes the pins after the operation.
+**Detail panel** — Shadow DOM, positioned to the right of the pin (or left if space is lacking), 296 px wide, anchored to the pin while scrolling. Closes on outside click, ✕ button, or Esc.
+
+Actions shown based on permissions:
+
+| Button | Condition | Action |
+|--------|-----------|--------|
+| **Dismiss** | `recipient_id` present AND `resolved_at` is null | Sets `resolved_at`, removes pin from page, updates badge |
+| **Profil** | `from_user_id` non-null | Opens the profile overlay (see below) |
+| **Delete** | `from_user_id === currentUserId` (own comment) | Two-step confirmation — deletes from Storage + DB, refreshes pins |
+
+Clicking the username in the header also opens the profile overlay (subtle cursor pointer + blue hover).
+
+**Profile overlay** — second overlay panel (same anchor, same size) opened from the detail panel.
+
+```
+┌─────────────────────────┐
+│ ← Profil              ✕ │
+├─────────────────────────┤
+│         ◉               │
+│      @username          │
+├─────────────────────────┤
+│ COMMENTAIRES PUBLICS    │
+│ ┌─────────────────────┐ │
+│ │ github.com       ↗  │ │  ← click → new tab + auto-opens pin
+│ │ "Body preview…"     │ │
+│ ├─────────────────────┤ │
+│ │ example.com      ↗  │ │
+│ │ "Another comment…"  │ │
+│ └─────────────────────┘ │
+├─────────────────────────┤
+│ [+ Ajouter aux contacts]│
+│  Ouvrez l'extension…    │
+└─────────────────────────┘
+```
+
+- **Back (←)**: closes the profile and re-opens the detail panel at the same position (position captured synchronously before any async call to prevent reflow shift)
+- **Public comments**: up to 5 recent public comments from that user across all pages; clicking one stores `pendingCommentLink` and opens a new tab — `handleContentReady` auto-triggers the pin detail on arrival
+- **Add to contacts**: button state reflects current relationship (`none` / `pending` / `accepted` / own profile); `ADD_CONTACT` message → `contacts` insert with `status: 'pending'`
+- **CTA**: static hint to open the extension for full contact management (popup cannot be opened programmatically in MV3)
 
 ### Error interception
 

@@ -15,6 +15,9 @@ export type Message =
   | { type: 'CONTENT_READY' }
   | { type: 'REFRESH_PINS';          payload: { visible: boolean } }
   | { type: 'UPDATE_BADGE' }
+  | { type: 'GET_USER_PROFILE';      payload: { userId: string } }
+  | { type: 'ADD_CONTACT';           payload: { addresseeId: string } }
+  | { type: 'NAVIGATE_TO_COMMENT';   payload: { commentId: string; url: string } }
 
 export type RecipientEntry =
   | { type: 'user'; id: string }

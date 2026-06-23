@@ -48,13 +48,13 @@ Goal: send and receive a comment end-to-end, with link sharing.
 - [x] Realtime: badge updated in real-time
 - [x] `chrome.notifications` for new receptions
 - [x] Mark as read on detail open (optimistic update + DB persistence)
-- [x] Mark as resolved (filters item from inbox + refreshes pins)
+- [x] Mark as resolved / **Dismiss** (filters item from inbox + refreshes pins) — renamed "Resolve" → "Dismiss" for clarity; available to any user with a `recipient_id`
 - [x] Realtime refresh of the inbox list (subscription `comment_recipients` in the popup)
 - [x] Content script: display of pin overlay on the live page (including public comments)
 - [x] On/off toggle in the popup to show/hide pins on the active page
 - [x] Pins anchored to the clicked DOM element (CSS selector + % offset) — survive scroll and resize
 - [x] Automatic pin repositioning on browser resize (80 ms debounce)
-- [x] Delete a comment (Storage + DB) from the list or detail, with pin refresh
+- [x] Delete a comment (Storage + DB) from the list or detail, with pin refresh — double protection: client-side (`from_user_id === currentUserId`) + server-side (`.eq('from_user_id', ...)` in delete query + `comments_delete` RLS policy)
 
 ### Extension — Error
 - [x] Content script: replacement screen with screenshot and message for inaccessible pages
@@ -85,6 +85,8 @@ Goal: send and receive a comment end-to-end, with link sharing.
 - [x] DB security fix: `handle_new_user` trigger uses explicit `search_path = public` (SECURITY DEFINER safe)
 - [x] `comment_inbox` view: includes anchor fields (functional DOM anchoring from inbox)
 - [x] `comment_inbox` view: exposes `from_avatar_url` and `from_initials` for avatar display on pins
+- [x] `comments_delete` RLS policy: only `from_user_id = auth.uid()` can delete (server-side guard)
+- [x] `cr_select_public` RLS policy: public `comment_recipients` readable by any authenticated user
 
 ### Backend — Edge Functions deployed
 - [x] `send-comment` — main comment creation + storage upload
@@ -123,6 +125,8 @@ The current "Share" button (link copy) becomes a menu with three distinct action
 - [x] `contacts` table: `requester_id`, `addressee_id`, `status: pending | accepted | declined`
 - [x] Popup — Contacts tab in the Profile view: accepted contacts + received requests (pending in / pending out / accepted)
 - [x] Popup — "Add a contact" action: search by username or email; handles already-sent / already-contact / no-account cases
+- [x] **In-page profile overlay** (from pin detail) — avatar, username, public comments list (clickable → navigates to the comment page + auto-opens the pin); "Add to contacts" button with status awareness (`none` / `pending` / `accepted` / own profile); CTA to open the extension for full contact management; back button restores the detail panel
+- [x] RLS migration: public `comment_recipients` readable by any authenticated user (`cr_select_public` policy)
 - [ ] Realtime notification + email when a contact request is received
 - [ ] Accepted contacts surfaced first in the @mention dropdown of the composer
 - [ ] `send-invite` Edge Function — app invitation email (distinct from `notify-email`)

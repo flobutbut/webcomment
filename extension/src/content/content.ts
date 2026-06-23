@@ -11,6 +11,8 @@ const SVG_CHECK  = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="1
 const SVG_GLOBE   = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`
 const SVG_TRASH   = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`
 const SVG_RESOLVE = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>`
+const SVG_BACK    = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>`
+const SVG_USER    = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`
 
 
 function buildPinElement(comment: CommentInboxItem): HTMLDivElement {
@@ -521,14 +523,7 @@ function showComposerOverlay(pinX: number, pinY: number) {
 async function showPinDetail(comment: CommentInboxItem, pinEl: HTMLElement) {
   document.getElementById('webcomment-detail-host')?.remove()
 
-  const sessionRes    = await chrome.runtime.sendMessage({ type: 'GET_SESSION' }) as { session?: { user: { id: string } } }
-  const currentUserId = sessionRes?.session?.user?.id
-
-  const recipientId = (comment as CommentInboxItem & { recipient_id?: string }).recipient_id
-  const canResolve  = !!recipientId && !comment.resolved_at
-  const canDelete   = !!currentUserId && comment.from_user_id === currentUserId
-  const hasActions  = canResolve || canDelete
-
+  // Capture position synchronously before any await to prevent shift on back-navigation
   const pinRect = pinEl.getBoundingClientRect()
   const W = 296, GAP = 12, MARGIN = 10
   let left = pinRect.right + GAP
@@ -537,6 +532,15 @@ async function showPinDetail(comment: CommentInboxItem, pinEl: HTMLElement) {
   let top = pinRect.top - 40
   if (top < MARGIN) top = MARGIN
   if (top + 380 > window.innerHeight - MARGIN) top = window.innerHeight - 380 - MARGIN
+
+  const sessionRes    = await chrome.runtime.sendMessage({ type: 'GET_SESSION' }) as { session?: { user: { id: string } } }
+  const currentUserId = sessionRes?.session?.user?.id
+
+  const recipientId = (comment as CommentInboxItem & { recipient_id?: string }).recipient_id
+  const canDismiss  = !!recipientId && !comment.resolved_at
+  const canDelete   = !!currentUserId && !!comment.from_user_id && comment.from_user_id === currentUserId
+  const canProfile  = !!comment.from_user_id
+  const hasActions  = canDismiss || canDelete || canProfile
 
   const formattedDate = new Date(comment.created_at).toLocaleString('en-US', {
     day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
@@ -567,7 +571,8 @@ async function showPinDetail(comment: CommentInboxItem, pinEl: HTMLElement) {
         font-size: 10px; font-weight: 700; color: #fff; overflow: hidden;
       }
       #avatar img { width: 100%; height: 100%; object-fit: cover; }
-      #meta { flex: 1; min-width: 0; }
+      #meta { flex: 1; min-width: 0; ${comment.from_user_id ? 'cursor: pointer;' : ''} }
+      #meta:hover #username { ${comment.from_user_id ? 'color: #2563EB;' : ''} transition: color 0.1s; }
       #username { font-size: 12px; font-weight: 600; color: #1e293b; }
       #date { font-size: 11px; color: #94a3b8; margin-top: 1px; }
       #close-btn {
@@ -588,8 +593,10 @@ async function showPinDetail(comment: CommentInboxItem, pinEl: HTMLElement) {
         font-family: inherit; display: flex; align-items: center; gap: 4px;
         transition: background 0.1s;
       }
-      button.resolve { background: #eff6ff; color: #2563EB; }
-      button.resolve:hover:not(:disabled) { background: #dbeafe; }
+      button.dismiss { background: #f1f5f9; color: #475569; }
+      button.dismiss:hover:not(:disabled) { background: #e2e8f0; }
+      button.profile { background: #eff6ff; color: #2563EB; }
+      button.profile:hover:not(:disabled) { background: #dbeafe; }
       button.delete  { background: #fff1f2; color: #ef4444; margin-left: auto; }
       button.delete:hover:not(:disabled)  { background: #fee2e2; }
       button.action:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -626,8 +633,9 @@ async function showPinDetail(comment: CommentInboxItem, pinEl: HTMLElement) {
       <div id="body-text">${renderTaggedBody(comment.body)}</div>
       ${hasActions ? `
       <div id="actions">
-        ${canResolve ? `<button class="action resolve" id="resolve-btn">${SVG_RESOLVE} Resolve</button>` : ''}
-        ${canDelete  ? `<button class="action delete"  id="delete-btn">${SVG_TRASH} Delete</button>`  : ''}
+        ${canDismiss ? `<button class="action dismiss"  id="dismiss-btn">${SVG_CHECK} Dismiss</button>`  : ''}
+        ${canProfile ? `<button class="action profile"  id="profile-btn">${SVG_USER}  Profil</button>`   : ''}
+        ${canDelete  ? `<button class="action delete"   id="delete-btn">${SVG_TRASH}  Delete</button>`   : ''}
       </div>
       <div id="confirm-area">
         <p id="confirm-text">Permanently delete this comment?</p>
@@ -679,24 +687,37 @@ async function showPinDetail(comment: CommentInboxItem, pinEl: HTMLElement) {
   backdrop.addEventListener('click', close)
   closeBtn.addEventListener('click', close)
 
-  const resolveBtn     = shadow.getElementById('resolve-btn')     as HTMLButtonElement | null
+  if (comment.from_user_id) {
+    shadow.getElementById('meta')!.addEventListener('click', () => {
+      close()
+      showUserProfile(comment, pinEl)
+    })
+  }
+
+  const dismissBtn     = shadow.getElementById('dismiss-btn')     as HTMLButtonElement | null
+  const profileBtn     = shadow.getElementById('profile-btn')     as HTMLButtonElement | null
   const deleteBtn      = shadow.getElementById('delete-btn')      as HTMLButtonElement | null
   const confirmArea    = shadow.getElementById('confirm-area')
   const confirmCancel  = shadow.getElementById('confirm-cancel')  as HTMLButtonElement | null
   const confirmDelete  = shadow.getElementById('confirm-delete')  as HTMLButtonElement | null
 
-  resolveBtn?.addEventListener('click', async () => {
-    resolveBtn.disabled = true
+  dismissBtn?.addEventListener('click', async () => {
+    dismissBtn.disabled = true
     const res = await chrome.runtime.sendMessage({
       type: 'RESOLVE_COMMENT',
       payload: { recipientId: recipientId! },
     }) as { error?: string }
     if (!res?.error) {
-      showToast('Comment resolved', true)
+      showToast('Commentaire masqué', true)
       close()
     } else {
-      resolveBtn.disabled = false
+      dismissBtn.disabled = false
     }
+  })
+
+  profileBtn?.addEventListener('click', () => {
+    close()
+    showUserProfile(comment, pinEl)
   })
 
   deleteBtn?.addEventListener('click', () => {
@@ -722,6 +743,232 @@ async function showPinDetail(comment: CommentInboxItem, pinEl: HTMLElement) {
       if (confirmDelete) confirmDelete.disabled = false
     }
   })
+}
+
+// ---------------------------------------------------------------------------
+// User profile overlay (triggered from pin detail)
+// ---------------------------------------------------------------------------
+
+async function showUserProfile(comment: CommentInboxItem, pinEl: HTMLElement) {
+  if (!comment.from_user_id) return
+  document.getElementById('webcomment-profile-host')?.remove()
+  document.getElementById('webcomment-detail-host')?.remove()
+
+  const pinRect = pinEl.getBoundingClientRect()
+  const W = 296, GAP = 12, MARGIN = 10
+  let left = pinRect.right + GAP
+  if (left + W > window.innerWidth - MARGIN) left = pinRect.left - W - GAP
+  if (left < MARGIN) left = MARGIN
+  let top = pinRect.top - 40
+  if (top < MARGIN) top = MARGIN
+  if (top + 440 > window.innerHeight - MARGIN) top = window.innerHeight - 440 - MARGIN
+
+  const host   = document.createElement('div')
+  host.id      = 'webcomment-profile-host'
+  const shadow = host.attachShadow({ mode: 'open' })
+
+  shadow.innerHTML = `
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      #backdrop { position: fixed; inset: 0; z-index: 2147483646; }
+      #panel {
+        position: fixed; left: ${left}px; top: ${top}px; width: ${W}px;
+        background: #fff; border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.16), 0 0 0 1px rgba(0,0,0,0.06);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        z-index: 2147483647; overflow: hidden;
+      }
+      #header {
+        display: flex; align-items: center; gap: 8px;
+        padding: 10px 12px 9px; border-bottom: 1px solid #f1f5f9;
+      }
+      #back-btn, #close-btn {
+        background: none; border: none; cursor: pointer; color: #94a3b8;
+        padding: 2px; border-radius: 4px; display: flex; align-items: center;
+        transition: color 0.1s; flex-shrink: 0;
+      }
+      #back-btn:hover, #close-btn:hover { color: #475569; }
+      #header-title { flex: 1; font-size: 12px; font-weight: 600; color: #94a3b8; text-align: center; }
+      #profile-section {
+        display: flex; flex-direction: column; align-items: center;
+        padding: 16px 12px 14px; gap: 6px;
+      }
+      #avatar {
+        width: 40px; height: 40px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 14px; font-weight: 700; color: #fff; overflow: hidden; flex-shrink: 0;
+      }
+      #avatar img { width: 100%; height: 100%; object-fit: cover; }
+      #username { font-size: 14px; font-weight: 600; color: #1e293b; }
+      #comments-section { border-top: 1px solid #f1f5f9; }
+      #comments-header {
+        padding: 8px 12px 6px; font-size: 11px; font-weight: 500;
+        color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em;
+      }
+      #comments-list { padding: 0 12px 10px; }
+      .comment-item {
+        border-radius: 6px; background: #f8fafc; margin-bottom: 4px;
+        cursor: pointer; border: 1px solid transparent; transition: background 0.1s, border-color 0.1s;
+        overflow: hidden;
+      }
+      .comment-item:hover { background: #eff6ff; border-color: #bfdbfe; }
+      .ci-meta {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 5px 8px 2px;
+      }
+      .ci-domain { font-size: 11px; font-weight: 600; color: #2563EB; }
+      .ci-arrow { color: #94a3b8; flex-shrink: 0; }
+      .ci-body {
+        padding: 0 8px 5px; font-size: 12px; color: #475569; line-height: 1.4;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      #empty-msg { font-size: 12px; color: #94a3b8; text-align: center; padding: 8px 0 4px; }
+      #footer { padding: 10px 12px 12px; border-top: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 8px; }
+      #add-contact-btn {
+        width: 100%; border: none; border-radius: 7px; cursor: pointer;
+        padding: 7px 12px; font-size: 12px; font-weight: 500; font-family: inherit;
+        background: #2563EB; color: #fff; transition: background 0.1s;
+        display: flex; align-items: center; justify-content: center; gap: 4px;
+      }
+      #add-contact-btn:hover:not(:disabled) { background: #1d4ed8; }
+      #add-contact-btn:disabled { opacity: 0.6; cursor: default; }
+      #add-contact-btn.sent { background: #16a34a; }
+      #popup-cta { font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.5; }
+    </style>
+    <div id="backdrop"></div>
+    <div id="panel">
+      <div id="header">
+        <button id="back-btn" title="Retour au commentaire">${SVG_BACK}</button>
+        <span id="header-title">Profil</span>
+        <button id="close-btn" title="Fermer">${SVG_X}</button>
+      </div>
+      <div id="profile-section">
+        <div id="avatar"></div>
+        <div id="username">@${escapeHtml(comment.from_username)}</div>
+      </div>
+      <div id="comments-section">
+        <div id="comments-header">Commentaires publics</div>
+        <div id="comments-list"><div id="empty-msg">Chargement…</div></div>
+      </div>
+      <div id="footer">
+        <button id="add-contact-btn" disabled>Chargement…</button>
+        <div id="popup-cta">Ouvrez l'extension pour gérer vos contacts</div>
+      </div>
+    </div>
+  `
+
+  document.body.appendChild(host)
+
+  const avatarEl = shadow.getElementById('avatar')!
+  if (comment.from_avatar_url) {
+    const img = document.createElement('img')
+    img.src = comment.from_avatar_url
+    img.onerror = () => { img.remove(); renderInitials(avatarEl, comment.from_username, comment.from_initials) }
+    avatarEl.appendChild(img)
+  } else {
+    renderInitials(avatarEl, comment.from_username, comment.from_initials)
+  }
+
+  const panel = shadow.getElementById('panel') as HTMLDivElement
+  function repositionPanel() {
+    const r = pinEl.getBoundingClientRect()
+    let l = r.right + GAP
+    if (l + W > window.innerWidth - MARGIN) l = r.left - W - GAP
+    if (l < MARGIN) l = MARGIN
+    let t = r.top - 40
+    if (t < MARGIN) t = MARGIN
+    if (t + 440 > window.innerHeight - MARGIN) t = window.innerHeight - 440 - MARGIN
+    panel.style.left = `${l}px`
+    panel.style.top  = `${t}px`
+  }
+  window.addEventListener('scroll', repositionPanel, { passive: true })
+
+  function close() {
+    window.removeEventListener('scroll', repositionPanel)
+    document.removeEventListener('keydown', onEsc)
+    host.remove()
+  }
+  function onEsc(e: KeyboardEvent) { if (e.key === 'Escape') close() }
+  document.addEventListener('keydown', onEsc)
+  shadow.getElementById('backdrop')!.addEventListener('click', close)
+  shadow.getElementById('close-btn')!.addEventListener('click', close)
+  shadow.getElementById('back-btn')!.addEventListener('click', () => {
+    close()
+    showPinDetail(comment, pinEl)
+  })
+
+  type ProfileComment = { comment_id: string; body: string; url: string; created_at: string }
+  type ProfileResult  = {
+    comments?: ProfileComment[]
+    contactStatus?: string
+    isCurrentUser?: boolean
+    error?: string
+  }
+  const res = await chrome.runtime.sendMessage({
+    type: 'GET_USER_PROFILE',
+    payload: { userId: comment.from_user_id },
+  }) as ProfileResult
+
+  const commentsList  = shadow.getElementById('comments-list')!
+  const addContactBtn = shadow.getElementById('add-contact-btn') as HTMLButtonElement
+
+  const SVG_EXT = `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>`
+
+  if (!res || res.error) {
+    commentsList.innerHTML = '<div id="empty-msg">Impossible de charger.</div>'
+  } else if (!res.comments || res.comments.length === 0) {
+    commentsList.innerHTML = '<div id="empty-msg">Aucun commentaire public.</div>'
+  } else {
+    commentsList.innerHTML = ''
+    res.comments.forEach(c => {
+      let domain = c.url
+      try { domain = new URL(c.url).hostname } catch { /* keep raw */ }
+      const el = document.createElement('div')
+      el.className = 'comment-item'
+      el.innerHTML = `
+        <div class="ci-meta">
+          <span class="ci-domain">${escapeHtml(domain)}</span>
+          <span class="ci-arrow">${SVG_EXT}</span>
+        </div>
+        <div class="ci-body">${escapeHtml(c.body)}</div>
+      `
+      el.addEventListener('click', () => {
+        chrome.runtime.sendMessage({
+          type: 'NAVIGATE_TO_COMMENT',
+          payload: { commentId: c.comment_id, url: c.url },
+        })
+      })
+      commentsList.appendChild(el)
+    })
+  }
+
+  if (res?.isCurrentUser) {
+    addContactBtn.remove()
+  } else if (res?.contactStatus === 'accepted') {
+    addContactBtn.textContent = 'Déjà contact ✓'
+    addContactBtn.disabled = true
+  } else if (res?.contactStatus === 'pending') {
+    addContactBtn.textContent = 'Invitation envoyée'
+    addContactBtn.disabled = true
+  } else {
+    addContactBtn.textContent = '+ Ajouter aux contacts'
+    addContactBtn.disabled = false
+    addContactBtn.addEventListener('click', async () => {
+      addContactBtn.disabled = true
+      addContactBtn.textContent = '…'
+      const addRes = await chrome.runtime.sendMessage({
+        type: 'ADD_CONTACT',
+        payload: { addresseeId: comment.from_user_id! },
+      }) as { success?: boolean; error?: string }
+      if (addRes?.success) {
+        addContactBtn.textContent = 'Invitation envoyée ✓'
+        addContactBtn.classList.add('sent')
+      } else {
+        addContactBtn.textContent = '+ Ajouter aux contacts'
+        addContactBtn.disabled = false
+      }
+    })
+  }
 }
 
 // ---------------------------------------------------------------------------

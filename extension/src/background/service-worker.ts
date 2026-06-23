@@ -138,7 +138,10 @@ async function handleMessage(message: Message): Promise<unknown> {
     case 'GET_SESSION':       return { session: currentSession }
     case 'UPDATE_BADGE':      return handleUpdateBadge()
     case 'REFRESH_PINS':      return handleRefreshPins(message.payload.visible)
-    default:                  return { error: 'Unknown message type' }
+    case 'GET_USER_PROFILE':  return getUserProfile(message.payload.userId)
+    case 'ADD_CONTACT':          return addContact(message.payload.addresseeId)
+    case 'NAVIGATE_TO_COMMENT': return navigateToComment(message.payload.commentId, message.payload.url)
+    default:                    return { error: 'Unknown message type' }
   }
 }
 
@@ -196,6 +199,7 @@ async function prepareCapture(pin: { x: number; y: number }): Promise<unknown> {
 
 async function finalizeComment(payload: FinalizePayload): Promise<unknown> {
   try {
+    if (!await ensureSession()) throw new Error('Not authenticated')
     const { pendingCapture } = await chrome.storage.local.get('pendingCapture')
     if (!pendingCapture) throw new Error('No pending capture')
 
@@ -322,6 +326,66 @@ async function showPinsForTab(tabId: number, rawUrl: string, targetCommentId?: s
 }
 
 // ---------------------------------------------------------------------------
+// User profile & contacts
+// ---------------------------------------------------------------------------
+
+async function getUserProfile(userId: string): Promise<unknown> {
+  try {
+    await ensureSession()
+    const currentUserId = currentSession!.user.id
+    const isCurrentUser = userId === currentUserId
+
+    const [commentsResult, contactResult] = await Promise.all([
+      supabase
+        .from('comment_inbox')
+        .select('comment_id, body, url, created_at')
+        .eq('from_user_id', userId)
+        .eq('recipient_type', 'public')
+        .order('created_at', { ascending: false })
+        .limit(5),
+      isCurrentUser
+        ? Promise.resolve({ data: null, error: null })
+        : supabase
+          .from('contacts')
+          .select('id, status')
+          .or(`and(requester_id.eq.${currentUserId},addressee_id.eq.${userId}),and(requester_id.eq.${userId},addressee_id.eq.${currentUserId})`)
+          .maybeSingle(),
+    ])
+
+    return {
+      comments:      commentsResult.data ?? [],
+      contactStatus: (contactResult.data as { status?: string } | null)?.status ?? 'none',
+      isCurrentUser,
+    }
+  } catch (err) {
+    return { error: (err as Error).message, comments: [], contactStatus: 'none', isCurrentUser: false }
+  }
+}
+
+async function navigateToComment(commentId: string, url: string): Promise<unknown> {
+  try {
+    await chrome.storage.local.set({ pendingCommentLink: { comment_id: commentId, url } })
+    await chrome.tabs.create({ url })
+    return { ok: true }
+  } catch (err) {
+    return { error: (err as Error).message }
+  }
+}
+
+async function addContact(addresseeId: string): Promise<unknown> {
+  try {
+    if (!await ensureSession()) throw new Error('Not authenticated')
+    const { error } = await supabase
+      .from('contacts')
+      .insert({ requester_id: currentSession!.user.id, addressee_id: addresseeId, status: 'pending' })
+    if (error) throw error
+    return { success: true }
+  } catch (err) {
+    return { error: (err as Error).message }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // CONTENT_READY handler
 // ---------------------------------------------------------------------------
 
@@ -434,7 +498,9 @@ async function deleteCommentById(commentId: string): Promise<unknown> {
     if (data?.screenshot_path) {
       await supabase.storage.from('screenshots').remove([data.screenshot_path])
     }
-    const { error } = await supabase.from('comments').delete().eq('id', commentId)
+    const { error } = await supabase.from('comments').delete()
+      .eq('id', commentId)
+      .eq('from_user_id', currentSession!.user.id)
     if (error) throw error
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
     if (tab?.id && tab.url) showPinsForTab(tab.id, tab.url)

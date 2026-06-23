@@ -185,6 +185,42 @@ The initials color is drawn from a palette of 8 colors via a simple hash of the 
 Initials palette: #2563EB #7C3AED #DB2777 #DC2626 #D97706 #059669 #0891B2 #4F46E5
 ```
 
+### Detail panel (page overlay)
+
+296 px wide, Shadow DOM, anchored to the pin, repositioned on scroll.
+
+Action buttons (12 px, 500 weight, `border-radius: 7px`, `padding: 5px 10px`):
+
+| Button | Class | Background | Text |
+|--------|-------|-----------|------|
+| Dismiss | `.dismiss` | `#f1f5f9` | `#475569` |
+| Profil | `.profile` | `#eff6ff` | `#2563EB` |
+| Delete | `.delete` | `#fff1f2` | `#ef4444` |
+
+Username in the header has `cursor: pointer` + blue hover when `from_user_id` is non-null — opens the profile overlay.
+
+### Profile overlay (page overlay)
+
+Same dimensions and shadow as the detail panel. Opens from the "Profil" button or the username click in the detail panel.
+
+Header: back arrow (←) + centered "Profil" label + ✕ close button.
+
+Profile section: 40 px centered avatar + `@username` (14 px, 600 weight).
+
+Public comments list:
+```css
+/* item */
+.comment-item { border-radius: 6px; background: #f8fafc; cursor: pointer;
+                border: 1px solid transparent; transition: background, border-color 0.1s; }
+.comment-item:hover { background: #eff6ff; border-color: #bfdbfe; }
+/* domain row */
+.ci-domain { font-size: 11px; font-weight: 600; color: #2563EB; }
+/* body row */
+.ci-body { font-size: 12px; color: #475569; white-space: nowrap; text-overflow: ellipsis; }
+```
+
+Footer: full-width "Ajouter aux contacts" button (`#2563EB` → green on success) + 11 px gray CTA text.
+
 ---
 
 ## Icons
@@ -234,9 +270,14 @@ const SVG_CHECK = `<svg ...>...</svg>`   // toast confirmation
 | `lucide:arrow-left` | `@iconify-icons/lucide/arrow-left` | Back (Inbox, Sent) |
 | `lucide:arrow-right` | `@iconify-icons/lucide/arrow-right` | Open page |
 | `lucide:trash-2` | `@iconify-icons/lucide/trash-2` | Delete comment |
-| SVG inline | `SVG_X` in content.ts | Close the composer |
+| SVG inline | `SVG_X` in content.ts | Close the composer / panels |
 | SVG inline | `SVG_SEND` in content.ts | Send button (composer) |
-| SVG inline | `SVG_CHECK` in content.ts | Send confirmation toast |
+| SVG inline | `SVG_CHECK` in content.ts | Send confirmation toast / Dismiss button |
+| SVG inline | `SVG_GLOBE` in content.ts | Public mode indicator |
+| SVG inline | `SVG_TRASH` in content.ts | Delete button (detail panel) |
+| SVG inline | `SVG_RESOLVE` in content.ts | Resolve/Dismiss button icon |
+| SVG inline | `SVG_BACK` in content.ts | Back button (profile overlay) |
+| SVG inline | `SVG_USER` in content.ts | "Profil" button (detail panel) |
 
 ---
 
