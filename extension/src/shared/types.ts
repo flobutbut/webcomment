@@ -3,17 +3,18 @@ export interface Profile {
   username:   string
   email:      string
   avatar_url: string | null
+  initials:   string | null
   created_at: string
 }
 
 export interface CommentInboxItem {
   recipient_id:    string
   comment_id:      string
-  from_user_id:    string
-  from_username:    string
-  from_email:       string
-  from_avatar_url:  string | null
-  url:              string
+  from_user_id:    string | null
+  from_username:   string
+  from_avatar_url: string | null
+  from_initials:   string | null
+  url:             string
   screenshot_url:  string
   pin_x:           number
   pin_y:           number
@@ -28,12 +29,6 @@ export interface CommentInboxItem {
   recipient_type:  'user' | 'group' | 'email' | 'public'
 }
 
-export interface Recipient {
-  type:  'user' | 'group'
-  id:    string
-  label: string
-}
-
 export interface PinPosition {
   x:               number
   y:               number
@@ -43,14 +38,13 @@ export interface PinPosition {
 }
 
 export interface SentComment {
-  id:              string
-  url:             string
-  body:            string
-  screenshot_url:  string
-  screenshot_path: string
-  pin_x:           number
-  pin_y:           number
-  created_at:      string
+  id:            string
+  url:           string
+  body:          string
+  screenshot_url: string
+  pin_x:         number
+  pin_y:         number
+  created_at:    string
 }
 
 export interface ShareContext {
@@ -66,16 +60,17 @@ export interface CommentLinkContext {
 }
 
 export interface ContactProfile {
-  id:         string
-  username:   string
-  email:      string
+  id:        string
+  username:  string
+  email:     string
   avatar_url: string | null
+  initials?:  string | null
 }
 
 export interface Contact {
-  id:          string
-  status:      'pending' | 'accepted' | 'declined'
-  created_at:  string
-  requester:   ContactProfile
-  addressee:   ContactProfile
+  id:         string
+  status:     'pending' | 'accepted' | 'declined'
+  created_at: string
+  requester:  ContactProfile
+  addressee:  ContactProfile
 }

@@ -18,7 +18,7 @@ extension/          # Chrome extension code
     background/     # service worker (auth, capture, realtime)
     content/        # scripts injected into pages (pin picker, overlay, error)
     popup/          # React UI (inbox, composer, settings)
-      components/   # reusable components (Button, …)
+      components/   # reusable components (Button, Avatar, Loading, Tabs)
       views/        # main views (Inbox, Sent, Login, Settings)
     shared/         # supabase client, TS types, chrome message types
   manifest.json
@@ -28,7 +28,8 @@ webapp/             # Landing page (Vite + React + Tailwind)
   src/
     App.tsx         # all sections (Hero, How it works, Use cases, CTA)
     components/
-      AuthModal.tsx # login / signup connected to Supabase
+      AuthModal.tsx   # login / signup connected to Supabase
+      PageComments.tsx # interactive demo: live pins, composer, Realtime, delete-by-token
     lib/
       supabase.ts   # shared Supabase client
   .env.example      # copy to .env.local and fill in the anon key
@@ -93,9 +94,13 @@ Then update DNS at Hostinger: add a CNAME record pointing to `cname.vercel-dns.c
 - The Supabase client is instantiated once in `shared/supabase.ts` and reused everywhere
 - Design system documented in `docs/DESIGN.md`
 - Action buttons: use `<Button variant="…">` from `popup/components/Button.tsx` (primary, secondary, danger, danger-filled)
+- User avatars: use `<Avatar username initials avatarUrl />` from `popup/components/Avatar.tsx` — shows photo if available, falls back to colored initials, then username initial
+- Tab bars: use `<Tabs tabs active onChange />` from `popup/components/Tabs.tsx`
+- Loading states: use `<Loading />` from `popup/components/Loading.tsx`
 - Popup icons: `<Icon icon={…} />` from `@iconify/react` with offline imports `@iconify-icons/lucide/*`
 - Content script icons: module-level SVG string constants in `content.ts` (no React available)
 - Always `escapeHtml()` before injecting `innerHTML` in the content script
+- Tags: stored as `text[]` on `comments.tags`; body text with `#hashtags` is rendered via `BodyWithTags` in Inbox.tsx
 
 ## Reference docs
 

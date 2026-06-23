@@ -28,6 +28,35 @@ The screenshot is the primary content. The live page is a bonus.
 3. They can click "Open page" to view the live page with the comment as an overlay
 4. If the page is inaccessible (auth, 404, etc.), the extension replaces the error screen with a service message showing the screenshot
 
+## Installation (developer mode)
+
+The extension is not yet published on any store. Load it directly from the built source.
+
+### Prerequisites
+
+```bash
+cd extension
+npm install
+npm run build   # outputs to extension/dist/
+```
+
+### Chrome / Edge
+
+1. Go to `chrome://extensions` (or `edge://extensions`)
+2. Enable **Developer mode** (toggle, top-right)
+3. Click **Load unpacked**
+4. Select the `extension/dist/` folder
+
+### Firefox
+
+1. Go to `about:debugging#/runtime/this-firefox`
+2. Click **Load Temporary Add-on…**
+3. Navigate to `extension/dist/` and select `manifest.json`
+
+> Firefox loads the extension as a temporary add-on — it is removed when the browser is closed. Re-load it from `about:debugging` after each restart.
+
+---
+
 ## Stack
 
 | Layer | Technology |
@@ -42,18 +71,22 @@ The screenshot is the primary content. The live page is a bonus.
 
 ```
 WebComment/
-├── extension/          # Chrome Extension
+├── extension/          # Chrome / Firefox Extension (MV3)
 │   ├── src/
 │   │   ├── background/ # Service worker
 │   │   ├── content/    # Scripts injected into pages
-│   │   ├── popup/      # Main extension UI
-│   │   └── shared/     # Common utilities
-│   ├── public/
+│   │   ├── popup/      # Main extension UI (React)
+│   │   └── shared/     # Common utilities & types
 │   ├── manifest.json
 │   └── package.json
-├── supabase/           # Supabase local config
+├── webapp/             # Landing page (Vite + React, deployed on Vercel)
+│   ├── src/
+│   │   ├── App.tsx
+│   │   └── components/
+│   └── package.json
+├── supabase/           # Supabase config
 │   ├── migrations/     # SQL migrations
-│   └── functions/      # Edge Functions
+│   └── functions/      # Edge Functions (Deno)
 └── docs/               # Technical documentation
 ```
 
@@ -61,6 +94,7 @@ WebComment/
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Database](docs/DATABASE.md)
-- [Chrome Extension](docs/EXTENSION.md)
+- [Extension](docs/EXTENSION.md)
 - [API & Edge Functions](docs/API.md)
+- [Design system](docs/DESIGN.md)
 - [Roadmap](docs/ROADMAP.md)

@@ -4,6 +4,13 @@
   "version": "0.1.0",
   "description": "Private anchored comments on any web page.",
 
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "webcomment@webcomment.app",
+      "strict_min_version": "109.0"
+    }
+  },
+
   "permissions": [
     "activeTab",
     "scripting",

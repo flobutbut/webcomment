@@ -69,6 +69,9 @@ Goal: send and receive a comment end-to-end, with link sharing.
 ### Extension — UI & Design system
 - [x] "New comment" button in a fixed footer at the bottom of the popup
 - [x] `Button` component with 4 variants (primary, secondary, danger, danger-filled)
+- [x] `Avatar` component — photo or deterministic colored initials (fallback)
+- [x] `Loading` component — spinner for async states
+- [x] `Tabs` component — reusable tab bar (used in Settings)
 - [x] Replacement of all unicode characters with Iconify icons (Lucide, offline)
 - [x] Extension icon: emoji 💬
 - [x] Page pins: user avatar (photo or deterministic colored initials)
@@ -78,8 +81,19 @@ Goal: send and receive a comment end-to-end, with link sharing.
 - [x] `notify-email`: HTML escaping of all user fields in emails (XSS fixed)
 - [x] DB schema: `anchor_selector`, `anchor_x`, `anchor_y` columns on `comments`
 - [x] DB schema: `recipient_email` column + `email` value in enum on `comment_recipients`
+- [x] DB schema: `profiles.initials` column (≤ 2 chars) — stored at signup, surfaced as `from_initials` in `comment_inbox`
+- [x] DB security fix: `handle_new_user` trigger uses explicit `search_path = public` (SECURITY DEFINER safe)
 - [x] `comment_inbox` view: includes anchor fields (functional DOM anchoring from inbox)
-- [x] `comment_inbox` view: exposes `from_avatar_url` for avatar display on pins
+- [x] `comment_inbox` view: exposes `from_avatar_url` and `from_initials` for avatar display on pins
+
+### Backend — Edge Functions deployed
+- [x] `send-comment` — main comment creation + storage upload
+- [x] `notify-email` — email notification (Resend, service role only)
+- [x] `create-share-link` — generates a share token for a page
+- [x] `resolve-share-link` — resolves a token to its target context
+- [x] `cleanup-screenshots` — purges orphan Storage files from `screenshot_cleanup_queue`
+- [x] `get-signed-url` — returns a fresh signed URL for a screenshot (auth required, owner or recipient only)
+- [x] `get-comment-page` — serves a comment as readable text (or JSON for the future webapp page); used by comment links (`/c/[id]`)
 
 ---
 
@@ -106,9 +120,9 @@ The current "Share" button (link copy) becomes a menu with three distinct action
 
 #### Contacts (private, mutual relationship)
 
-- [ ] `contacts` table: `requester_id`, `addressee_id`, `status: pending | accepted | declined`
-- [ ] Popup — Contacts tab in the Profile view: accepted contacts + received requests
-- [ ] Popup — "Add a contact" action from the Share button (email/username search)
+- [x] `contacts` table: `requester_id`, `addressee_id`, `status: pending | accepted | declined`
+- [x] Popup — Contacts tab in the Profile view: accepted contacts + received requests (pending in / pending out / accepted)
+- [x] Popup — "Add a contact" action: search by username or email; handles already-sent / already-contact / no-account cases
 - [ ] Realtime notification + email when a contact request is received
 - [ ] Accepted contacts surfaced first in the @mention dropdown of the composer
 - [ ] `send-invite` Edge Function — app invitation email (distinct from `notify-email`)
@@ -117,7 +131,7 @@ The current "Share" button (link copy) becomes a menu with three distinct action
 
 Public mode allows displaying comments visible to all extension users on the same URL. The follow system is an extension of this mode.
 
-- [ ] `VITE_PUBLIC_MODE_ENABLED` environment variable (`true` / `false`) — hides from the UI: the public toggle in the composer, the public feed, and follow
+- [x] `VITE_PUBLIC_MODE_ENABLED` environment variable (`true` / `false`) — hides from the UI: the public toggle in the composer, the public feed, and follow
 - [ ] `follows` table: `follower_id → followed_id` (asymmetric, no acceptance)
 - [ ] Popup — "Follow" button on a user's profile (public mode enabled only)
 - [ ] Content script — public comments from followed users highlighted visually on visited pages
@@ -137,7 +151,14 @@ Public mode allows displaying comments visible to all extension users on the sam
 ## Phase 3 — Quality & Polish (weeks 7-8)
 
 - [x] **Comment link** — "Copy link" button in the detail (inbox and sent); the extension intercepts the URL and opens the page + targeted pin automatically; for users without the extension, the URL shows the comment content as readable text + install link (Supabase forces `text/plain` + restrictive CSP on its entire domain — HTML page rendering planned in Phase 4 via `webcomment.app/c/[id]`)
-- [ ] **Replies (threads)** — reply to a comment from the pin detail overlay (storage: `comment_replies` table, displayed below the message in the panel)
+- [x] **Pre-reply robustness** — `comments.from_user_id` nullable + `ON DELETE SET NULL` (deleted account → comments kept, displayed as "Deleted user"); `screenshot_cleanup_queue` table + trigger + `cleanup-screenshots` Edge Function (called at service worker startup to purge orphan Storage files)
+- [x] **Tags** — `comments.tags` column (text array); `comment_inbox` view exposes `tags`; Inbox UI highlights `#hashtags` in blue (`BodyWithTags` component)
+- [ ] **Replies (threads)** — reply to a comment from the pin detail overlay
+  - DB prep done (nullable `from_user_id`, cleanup queue) — migration `_before_replies` applied
+  - Still needed: `comment_replies` table (`id`, `comment_id` FK, `from_user_id` FK SET NULL, `body`, `created_at`)
+  - RLS: select if recipient of parent comment or author; insert if authenticated
+  - UI: replies section under the message in the overlay panel and popup detail
+  - Realtime: subscription on `comment_replies` for comments visible on the page
 - [ ] Multi-pin overlay on the same page (list of comments on the current page)
 - [ ] Improve CSS selector robustness on SPAs (React, Vue) — dynamic classes
 - [ ] Inbox filters: unread, by URL
@@ -147,7 +168,7 @@ Public mode allows displaying comments visible to all extension users on the sam
 - [ ] Optional share link expiration
 - [ ] Remove debug logs from the `notify-email` function (`toEmails`, `errors`, `hasApiKey` fields)
 - [ ] `MARK_READ` by group: currently one `comment_recipients` row per group → plan one row per member for individual marking
-- [ ] Settings: profile editing (username, avatar)
+- [ ] Settings: profile editing (username, avatar) — profile display already done, editing not yet implemented
 
 ---
 
@@ -162,6 +183,7 @@ Public mode allows displaying comments visible to all extension users on the sam
 ### Web App (`webapp/` — Vite + React, deployed on Vercel)
 - [x] Initialize Vite + React + Tailwind project
 - [x] `/` — landing page with install button, use cases, Supabase auth (login + signup)
+- [x] Interactive `PageComments` demo on the landing page — live pins, composer, Realtime insert/delete, delete-by-token, 5 min rate limit (`demo_comments` table, Realtime enabled)
 - [x] Deploy on Vercel (GitHub integration, auto-deploy on push to `main`)
 - [ ] Custom domain (configure DNS at Hostinger → Vercel)
 - [ ] `/login` — dedicated auth page (email/password, same account as the extension)

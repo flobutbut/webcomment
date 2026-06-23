@@ -45,6 +45,8 @@ Deno.serve(async (req) => {
   const body: SendCommentBody = await req.json()
   const { comment_id, url, screenshot_path, pin_x, pin_y, anchor_selector, anchor_x, anchor_y, to } = body
 
+  const tags = [...new Set([...body.body.matchAll(/#([A-Za-z0-9_]+)/g)].map(m => m[1].toLowerCase()))]
+
   // Générer l'URL signée (7 jours)
   const { data: signedData, error: signError } = await supabase.storage
     .from('screenshots')
@@ -66,6 +68,7 @@ Deno.serve(async (req) => {
       anchor_x:        anchor_x        ?? null,
       anchor_y:        anchor_y        ?? null,
       body:            body.body,
+      tags,
     })
   if (insertError) return new Response(insertError.message, { status: 500 })
 

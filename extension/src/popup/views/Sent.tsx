@@ -5,16 +5,34 @@ import arrowRightIcon from '@iconify-icons/lucide/arrow-right'
 import trash2Icon     from '@iconify-icons/lucide/trash-2'
 import checkIcon      from '@iconify-icons/lucide/check'
 import link2Icon      from '@iconify-icons/lucide/link-2'
-import { Button } from '../components/Button'
+import imageOffIcon   from '@iconify-icons/lucide/image-off'
+import { Button }  from '../components/Button'
+import { Loading } from '../components/Loading'
 import { supabase } from '../../shared/supabase'
 import type { SentComment } from '../../shared/types'
-import { hostname, timeAgo } from '../../shared/utils'
+import { hostname, timeAgo, commentLinkUrl } from '../../shared/utils'
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string
+function ScreenshotThumbnail({ url, pinX, pinY }: { url: string; pinX: number; pinY: number }) {
+  const [err, setErr] = useState(false)
+  return (
+    <div className="relative flex-shrink-0 w-14 h-10">
+      {err ? (
+        <div className="w-14 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
+          <Icon icon={imageOffIcon} width={12} height={12} />
+        </div>
+      ) : (
+        <>
+          <img src={url} className="w-14 h-10 object-cover rounded border border-gray-200" alt="" onError={() => setErr(true)} />
+          <div className="absolute w-2.5 h-2.5 rounded-full bg-blue-600 border border-white shadow-sm"
+            style={{ left: `${pinX}%`, top: `${pinY}%`, transform: 'translate(-50%, -50%)' }} />
+        </>
+      )}
+    </div>
+  )
+}
 
-async function deleteComment(comment: SentComment) {
-  await supabase.storage.from('screenshots').remove([comment.screenshot_path])
-  await supabase.from('comments').delete().eq('id', comment.id)
+async function deleteComment(commentId: string) {
+  await chrome.runtime.sendMessage({ type: 'DELETE_COMMENT', payload: { commentId } })
 }
 
 function Detail({
@@ -29,17 +47,17 @@ function Detail({
   const [confirming, setConfirming] = useState(false)
   const [deleting,   setDeleting]   = useState(false)
   const [copied,     setCopied]     = useState(false)
+  const [imgError,   setImgError]   = useState(false)
 
   async function handleCopyLink() {
-    const url = `${SUPABASE_URL}/functions/v1/get-comment-page?id=${comment.id}`
-    await navigator.clipboard.writeText(url)
+    await navigator.clipboard.writeText(commentLinkUrl(comment.id))
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
 
   async function handleDelete() {
     setDeleting(true)
-    await deleteComment(comment)
+    await deleteComment(comment.id)
     onDeleted(comment.id)
   }
 
@@ -66,11 +84,25 @@ function Detail({
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <div className="relative rounded-lg overflow-hidden border border-gray-200">
-          <img src={comment.screenshot_url} className="w-full" alt="capture" />
-          <div
-            className="absolute w-5 h-5 rounded-full bg-blue-600 border-2 border-white shadow-md"
-            style={{ left: `${comment.pin_x}%`, top: `${comment.pin_y}%`, transform: 'translate(-50%, -50%)' }}
-          />
+          {imgError ? (
+            <div className="w-full h-32 bg-gray-50 flex flex-col items-center justify-center gap-2 text-gray-400">
+              <Icon icon={imageOffIcon} width={20} height={20} />
+              <span className="text-[12px]">Failed to load screenshot</span>
+            </div>
+          ) : (
+            <>
+              <img
+                src={comment.screenshot_url}
+                className="w-full"
+                alt="capture"
+                onError={() => setImgError(true)}
+              />
+              <div
+                className="absolute w-5 h-5 rounded-full bg-blue-600 border-2 border-white shadow-md"
+                style={{ left: `${comment.pin_x}%`, top: `${comment.pin_y}%`, transform: 'translate(-50%, -50%)' }}
+              />
+            </>
+          )}
         </div>
         <div>
           <p className="text-[11px] text-gray-400 mb-1">{new Date(comment.created_at).toLocaleString('en-US')}</p>
@@ -81,20 +113,11 @@ function Detail({
           <div className="space-y-2">
             <p className="text-[12px] text-gray-500 text-center">Delete this comment?</p>
             <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                onClick={() => setConfirming(false)}
-                className="flex-1"
-              >
+              <Button variant="secondary" onClick={() => setConfirming(false)} className="flex-1">
                 Cancel
               </Button>
-              <Button
-                variant="danger-filled"
-                onClick={handleDelete}
-                disabled={deleting}
-                className="flex-1"
-              >
-                {deleting ? 'Deleting...' : 'Delete'}
+              <Button variant="danger-filled" onClick={handleDelete} disabled={deleting} className="flex-1">
+                {deleting ? 'Deleting…' : 'Delete'}
               </Button>
             </div>
           </div>
@@ -131,7 +154,7 @@ export function Sent({ userId, onCommentDeleted }: { userId: string; onCommentDe
   useEffect(() => {
     supabase
       .from('comments')
-      .select('id, url, body, screenshot_url, screenshot_path, pin_x, pin_y, created_at')
+      .select('id, url, body, screenshot_url, pin_x, pin_y, created_at')
       .eq('from_user_id', userId)
       .order('created_at', { ascending: false })
       .then(({ data }) => {
@@ -149,7 +172,7 @@ export function Sent({ userId, onCommentDeleted }: { userId: string; onCommentDe
   async function handleQuickDelete(e: React.MouseEvent, comment: SentComment) {
     e.stopPropagation()
     setDeletingId(comment.id)
-    await deleteComment(comment)
+    await deleteComment(comment.id)
     handleDeleted(comment.id)
     setDeletingId(null)
   }
@@ -164,9 +187,7 @@ export function Sent({ userId, onCommentDeleted }: { userId: string; onCommentDe
     )
   }
 
-  if (loading) {
-    return <div className="p-4 text-[13px] text-gray-400 text-center mt-8">Loading...</div>
-  }
+  if (loading) return <Loading />
 
   if (comments.length === 0) {
     return (
@@ -188,17 +209,7 @@ export function Sent({ userId, onCommentDeleted }: { userId: string; onCommentDe
             onClick={() => setSelected(comment)}
             className="w-full text-left px-4 py-3 flex gap-3 pr-10"
           >
-            <div className="relative flex-shrink-0">
-              <img
-                src={comment.screenshot_url}
-                className="w-14 h-10 object-cover rounded border border-gray-200"
-                alt=""
-              />
-              <div
-                className="absolute w-2.5 h-2.5 rounded-full bg-blue-600 border border-white shadow-sm"
-                style={{ left: `${comment.pin_x}%`, top: `${comment.pin_y}%`, transform: 'translate(-50%, -50%)' }}
-              />
-            </div>
+            <ScreenshotThumbnail url={comment.screenshot_url} pinX={comment.pin_x} pinY={comment.pin_y} />
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-1 mb-0.5">
                 <span className="text-[11px] text-gray-500 truncate">{hostname(comment.url)}</span>

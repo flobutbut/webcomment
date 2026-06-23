@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Session } from '@supabase/supabase-js'
-import type { Message, SendPayload, FinalizePayload } from '../shared/messages'
-import type { ShareContext, CommentLinkContext } from '../shared/types'
+import type { Message, FinalizePayload } from '../shared/messages'
+import type { ShareContext, CommentLinkContext, Profile } from '../shared/types'
 
 const SUPABASE_URL   = import.meta.env.VITE_SUPABASE_URL as string
 const SUPABASE_KEY   = import.meta.env.VITE_SUPABASE_ANON_KEY as string
@@ -16,46 +16,52 @@ let realtimeChannel: ReturnType<typeof supabase.channel> | null = null
 // Top-level listeners (required for MV3)
 // ---------------------------------------------------------------------------
 
-chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) => {
+  if (message.type === 'CONTENT_READY') {
+    const tabId = sender.tab?.id
+    const url   = sender.tab?.url
+    if (tabId && url) handleContentReady(tabId, url)
+    sendResponse({ ok: true })
+    return true
+  }
   handleMessage(message).then(sendResponse)
   return true
 })
 
-chrome.webNavigation.onCommitted.addListener(
-  (details) => {
-    if (details.frameId !== 0) return
-    handleShareLink(details.tabId, details.url)
-  },
-  { url: [{ hostEquals: new URL(SHARE_BASE_URL).hostname, pathPrefix: '/s/' }] }
-)
+chrome.webNavigation.onCommitted.addListener((details) => {
+  if (details.frameId !== 0) return
+  try {
+    const url = new URL(details.url)
+    if (url.hostname === new URL(SHARE_BASE_URL).hostname && url.pathname.startsWith('/s/')) {
+      handleShareLink(details.tabId, details.url)
+    }
+  } catch { /* invalid URL */ }
+})
 
-chrome.webNavigation.onCommitted.addListener(
-  (details) => {
-    if (details.frameId !== 0) return
-    handleCommentLink(details.tabId, details.url)
-  },
-  { url: [{ hostEquals: new URL(SUPABASE_URL).hostname, pathEquals: '/functions/v1/get-comment-page' }] }
-)
+chrome.webNavigation.onCommitted.addListener((details) => {
+  if (details.frameId !== 0) return
+  try {
+    const url = new URL(details.url)
+    if (url.hostname === new URL(SUPABASE_URL).hostname && url.pathname === '/functions/v1/get-comment-page') {
+      handleCommentLink(details.tabId, details.url)
+    }
+  } catch { /* invalid URL */ }
+})
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.status !== 'complete') return
   if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) return
 
-  const { pinsVisible, pendingCommentLink } = await chrome.storage.local.get(['pinsVisible', 'pendingCommentLink'])
+  const { pendingCommentLink } = await chrome.storage.local.get('pendingCommentLink')
+  if (!pendingCommentLink) return
 
-  if (pendingCommentLink) {
-    const ctx      = pendingCommentLink as CommentLinkContext
-    const tabBase  = tab.url.split('#')[0]
-    const linkBase = ctx.url.split('#')[0]
-    if (tabBase === linkBase) {
-      await chrome.storage.local.remove('pendingCommentLink')
-      await showPinsForTab(tabId, tab.url, ctx.comment_id)
-      return
-    }
+  const ctx      = pendingCommentLink as CommentLinkContext
+  const tabBase  = tab.url.split('#')[0]
+  const linkBase = ctx.url.split('#')[0]
+  if (tabBase === linkBase) {
+    await chrome.storage.local.remove('pendingCommentLink')
+    await showPinsForTab(tabId, tab.url, ctx.comment_id)
   }
-
-  if (!pinsVisible) return
-  await showPinsForTab(tabId, tab.url)
 })
 
 // ---------------------------------------------------------------------------
@@ -69,10 +75,10 @@ chrome.storage.local.get('session', async ({ session }) => {
     currentSession = data.session
     chrome.storage.local.set({ session: data.session })
     subscribeToInbox(data.session.user.id)
+    supabase.functions.invoke('cleanup-screenshots')
   }
 })
 
-// Reacts when the popup saves a new session (login or refresh)
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local' || !changes.session) return
   const newSession = changes.session.newValue
@@ -92,7 +98,7 @@ supabase.auth.onAuthStateChange((event, session) => {
     chrome.storage.local.set({ session })
     subscribeToInbox(session.user.id)
   } else {
-    chrome.storage.local.remove('session')
+    chrome.storage.local.remove(['session', 'profile'])
     realtimeChannel?.unsubscribe()
     realtimeChannel = null
     chrome.action.setBadgeText({ text: '' })
@@ -105,7 +111,6 @@ supabase.auth.onAuthStateChange((event, session) => {
 
 async function handleMessage(message: Message): Promise<unknown> {
   switch (message.type) {
-    case 'CAPTURE_AND_SEND':  return captureAndSend(message.payload)
     case 'PREPARE_CAPTURE':   return prepareCapture(message.payload)
     case 'FINALIZE_COMMENT':  return finalizeComment(message.payload)
     case 'SEARCH_USERS':      return searchUsers(message.payload.query)
@@ -113,44 +118,14 @@ async function handleMessage(message: Message): Promise<unknown> {
     case 'RESOLVE_COMMENT':   return resolveComment(message.payload.recipientId)
     case 'DELETE_COMMENT':    return deleteCommentById(message.payload.commentId)
     case 'GET_SESSION':       return { session: currentSession }
+    case 'UPDATE_BADGE':      return handleUpdateBadge()
+    case 'REFRESH_PINS':      return handleRefreshPins(message.payload.visible)
     default:                  return { error: 'Unknown message type' }
   }
 }
 
 // ---------------------------------------------------------------------------
-// Classic send (popup Composer — compat)
-// ---------------------------------------------------------------------------
-
-async function captureAndSend(payload: SendPayload): Promise<unknown> {
-  try {
-    if (!await ensureSession()) throw new Error('Not authenticated')
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-    if (!tab?.id || !tab.url) throw new Error('Tab not found')
-
-    const dataUrl  = await chrome.tabs.captureVisibleTab({ format: 'png' })
-    const webpBlob = await convertToWebP(dataUrl)
-
-    const commentId = crypto.randomUUID()
-    const path      = `${currentSession.user.id}/${commentId}.webp`
-
-    const { error: uploadError } = await supabase.storage
-      .from('screenshots')
-      .upload(path, webpBlob, { contentType: 'image/webp' })
-    if (uploadError) throw uploadError
-
-    const { data, error } = await supabase.functions.invoke('send-comment', {
-      body: { comment_id: commentId, url: tab.url, screenshot_path: path, ...payload },
-    })
-    if (error) throw error
-
-    return { success: true, comment_id: (data as { comment_id: string }).comment_id }
-  } catch (err) {
-    return { error: (err as Error).message }
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Two-step capture (in-page composer)
+// Two-step capture
 // ---------------------------------------------------------------------------
 
 async function ensureSession(): Promise<boolean> {
@@ -175,7 +150,7 @@ async function prepareCapture(pin: { x: number; y: number }): Promise<unknown> {
     const webpBlob = await convertToWebP(dataUrl)
 
     const commentId = crypto.randomUUID()
-    const path      = `${currentSession.user.id}/${commentId}.webp`
+    const path      = `${currentSession!.user.id}/${commentId}.webp`
 
     const { error: uploadError } = await supabase.storage
       .from('screenshots')
@@ -224,9 +199,8 @@ async function finalizeComment(payload: FinalizePayload): Promise<unknown> {
 
     await chrome.storage.local.remove('pendingCapture')
 
-    // Refresh pins immediately if the toggle is active
     chrome.storage.local.get('pinsVisible').then(({ pinsVisible }) => {
-      if (!pinsVisible) return
+      if (pinsVisible === false) return
       chrome.tabs.query({ active: true, currentWindow: true }).then(([activeTab]) => {
         if (activeTab?.id && activeTab.url) showPinsForTab(activeTab.id, activeTab.url)
       })
@@ -239,7 +213,7 @@ async function finalizeComment(payload: FinalizePayload): Promise<unknown> {
 }
 
 // ---------------------------------------------------------------------------
-// User search (for the in-page composer)
+// User search
 // ---------------------------------------------------------------------------
 
 async function searchUsers(query: string): Promise<unknown> {
@@ -258,13 +232,33 @@ async function searchUsers(query: string): Promise<unknown> {
 }
 
 // ---------------------------------------------------------------------------
-// Auto-display pins on page load
+// Pins
 // ---------------------------------------------------------------------------
+
+async function handleRefreshPins(visible: boolean): Promise<unknown> {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+    if (!tab?.id || !tab.url) return { ok: false }
+
+    if (!visible) {
+      try {
+        await chrome.tabs.sendMessage(tab.id, { type: 'SHOW_PINS', payload: { comments: [] } })
+      } catch { /* content script not present */ }
+    } else {
+      await showPinsForTab(tab.id, tab.url)
+    }
+    return { ok: true }
+  } catch {
+    return { ok: false }
+  }
+}
 
 async function showPinsForTab(tabId: number, rawUrl: string, targetCommentId?: string) {
   try {
     if (!await ensureSession()) return
     const userId = currentSession!.user.id
+
+    const { profile } = await chrome.storage.local.get('profile') as { profile?: Profile }
 
     const baseUrl = rawUrl.split('#')[0]
     const urlSet  = [...new Set([rawUrl, baseUrl])]
@@ -278,10 +272,12 @@ async function showPinsForTab(tabId: number, rawUrl: string, targetCommentId?: s
 
     const sentNormalized = (sent ?? []).map(c => ({
       ...c,
-      comment_id:    c.id,
-      from_username: 'Me',
-      from_user_id:  userId,
-      for_user_id:   userId,
+      comment_id:      c.id,
+      from_username:   profile?.username   ?? 'Me',
+      from_avatar_url: profile?.avatar_url ?? null,
+      from_initials:   profile?.initials   ?? null,
+      from_user_id:    userId,
+      for_user_id:     userId,
     }))
 
     const receivedIds = new Set((received ?? []).map((c: { comment_id: string }) => c.comment_id))
@@ -304,6 +300,33 @@ async function showPinsForTab(tabId: number, rawUrl: string, targetCommentId?: s
     }
   } catch {
     // page does not support content scripts
+  }
+}
+
+// ---------------------------------------------------------------------------
+// CONTENT_READY handler
+// ---------------------------------------------------------------------------
+
+async function handleContentReady(tabId: number, url: string) {
+  try {
+    const { pinsVisible, pendingCommentLink } = await chrome.storage.local.get(['pinsVisible', 'pendingCommentLink'])
+
+    if (pendingCommentLink) {
+      const ctx      = pendingCommentLink as CommentLinkContext
+      const tabBase  = url.split('#')[0]
+      const linkBase = ctx.url.split('#')[0]
+      if (tabBase === linkBase) {
+        await chrome.storage.local.remove('pendingCommentLink')
+        await showPinsForTab(tabId, url, ctx.comment_id)
+        return
+      }
+    }
+
+    if (pinsVisible !== false) {
+      await showPinsForTab(tabId, url)
+    }
+  } catch {
+    // non-fatal
   }
 }
 
@@ -366,8 +389,14 @@ async function handleCommentLink(tabId: number, rawUrl: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Mark as read
+// Badge
 // ---------------------------------------------------------------------------
+
+async function handleUpdateBadge(): Promise<unknown> {
+  if (!currentSession) return { ok: false }
+  await updateBadge(currentSession.user.id)
+  return { ok: true }
+}
 
 async function markRead(recipientId: string): Promise<unknown> {
   const { error } = await supabase
@@ -448,7 +477,7 @@ async function updateBadge(userId: string) {
     .from('comment_inbox')
     .select('recipient_id')
     .eq('for_user_id', userId)
-    .neq('from_user_id', userId)
+    .or(`from_user_id.neq.${userId},from_user_id.is.null`)
     .neq('recipient_type', 'public')
     .is('read_at', null)
     .is('resolved_at', null)

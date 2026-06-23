@@ -61,7 +61,7 @@ export function Login() {
     setLoading(true)
 
     if (isSignUp) {
-      const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { username } } })
+      const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { username, initials: avatarLetters || username.replace(/\s/g, '').slice(0, 2).toUpperCase() } } })
       if (error) {
         setError(translateAuthError(error.message || `Error ${(error as { status?: number }).status ?? 'unknown'}`))
       } else if (!data.session) {

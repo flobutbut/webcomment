@@ -1,18 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button } from '../components/Button'
+import { Button }  from '../components/Button'
+import { Loading } from '../components/Loading'
+import { Tabs }    from '../components/Tabs'
+import { Avatar }  from '../components/Avatar'
 import { supabase } from '../../shared/supabase'
 import type { Profile, Contact, ContactProfile } from '../../shared/types'
 
 type ProfileTab = 'profile' | 'contacts'
 
-function Avatar({ user, size = 9 }: { user: ContactProfile; size?: number }) {
-  const sizeClass = `w-${size} h-${size}`
-  return (
-    <div className={`${sizeClass} rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-[13px] flex-shrink-0`}>
-      {user.username.slice(0, 2).toUpperCase()}
-    </div>
-  )
-}
+const SETTINGS_TABS = [
+  { value: 'profile'  as ProfileTab, label: 'Profile'  },
+  { value: 'contacts' as ProfileTab, label: 'Contacts' },
+]
 
 function ContactRow({
   contact,
@@ -32,7 +31,12 @@ function ContactRow({
 
   return (
     <div className="flex items-center gap-3 py-2.5 px-3 rounded-lg hover:bg-gray-50">
-      <Avatar user={other} size={8} />
+      <Avatar
+        username={other.username}
+        initials={(other as ContactProfile).initials}
+        avatarUrl={other.avatar_url}
+        className="w-8 h-8 text-[12px]"
+      />
       <div className="flex-1 min-w-0">
         <p className="text-[13px] font-medium text-gray-900 truncate">{other.username}</p>
         <p className="text-[11px] text-gray-400 truncate">{other.email}</p>
@@ -69,14 +73,14 @@ function ContactRow({
   )
 }
 
-export function Settings({ profile, onClose }: { profile: Profile | null; onClose?: () => void }) {
-  const [tab,        setTab]        = useState<ProfileTab>('profile')
-  const [contacts,   setContacts]   = useState<Contact[]>([])
-  const [loading,    setLoading]    = useState(false)
-  const [addOpen,    setAddOpen]    = useState(false)
-  const [query,      setQuery]      = useState('')
-  const [addStatus,  setAddStatus]  = useState<{ type: 'success' | 'error' | 'info'; msg: string } | null>(null)
-  const [adding,     setAdding]     = useState(false)
+export function Settings({ profile, onClose, onContactChange }: { profile: Profile | null; onClose?: () => void; onContactChange?: () => void }) {
+  const [tab,       setTab]       = useState<ProfileTab>('profile')
+  const [contacts,  setContacts]  = useState<Contact[]>([])
+  const [loading,   setLoading]   = useState(false)
+  const [addOpen,   setAddOpen]   = useState(false)
+  const [query,     setQuery]     = useState('')
+  const [addStatus, setAddStatus] = useState<{ type: 'success' | 'error' | 'info'; msg: string } | null>(null)
+  const [adding,    setAdding]    = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -95,8 +99,8 @@ export function Settings({ profile, onClose }: { profile: Profile | null; onClos
       .from('contacts')
       .select(`
         id, status, created_at,
-        requester:profiles!contacts_requester_id_fkey(id, username, email, avatar_url),
-        addressee:profiles!contacts_addressee_id_fkey(id, username, email, avatar_url)
+        requester:profiles!contacts_requester_id_fkey(id, username, email, avatar_url, initials),
+        addressee:profiles!contacts_addressee_id_fkey(id, username, email, avatar_url, initials)
       `)
       .in('status', ['pending', 'accepted'])
       .order('created_at', { ascending: false })
@@ -107,11 +111,13 @@ export function Settings({ profile, onClose }: { profile: Profile | null; onClos
   async function handleAccept(id: string) {
     await supabase.from('contacts').update({ status: 'accepted' }).eq('id', id)
     setContacts(cs => cs.map(c => c.id === id ? { ...c, status: 'accepted' } : c))
+    onContactChange?.()
   }
 
   async function handleDecline(id: string) {
     await supabase.from('contacts').update({ status: 'declined' }).eq('id', id)
     setContacts(cs => cs.filter(c => c.id !== id))
+    onContactChange?.()
   }
 
   async function handleRemove(id: string) {
@@ -125,20 +131,18 @@ export function Settings({ profile, onClose }: { profile: Profile | null; onClos
     setAdding(true)
     setAddStatus(null)
 
-    const input = query.trim()
+    const input   = query.trim()
     const isEmail = input.includes('@')
 
-    // Look up target profile
     const { data: found } = await supabase
       .from('profiles')
       .select('id, username, email, avatar_url')
-      .eq(isEmail ? 'email' : 'username', isEmail ? input : input)
+      .eq(isEmail ? 'email' : 'username', input)
       .neq('id', profile.id)
       .maybeSingle()
 
     if (!found) {
       if (isEmail) {
-        // TODO: send an invitation email when the extension is on the Chrome Web Store
         setAddStatus({ type: 'info', msg: "No account found. Email invitation will be available once the extension is published." })
       } else {
         setAddStatus({ type: 'error', msg: "No account found with this username." })
@@ -147,7 +151,6 @@ export function Settings({ profile, onClose }: { profile: Profile | null; onClos
       return
     }
 
-    // Check if a relationship already exists in either direction
     const { data: existing } = await supabase
       .from('contacts')
       .select('id, status, requester_id, addressee_id')
@@ -192,33 +195,19 @@ export function Settings({ profile, onClose }: { profile: Profile | null; onClos
   return (
     <div className="flex flex-col h-full">
 
-      {/* Tabs */}
-      <div className="flex border-b border-gray-100 flex-shrink-0">
-        {(['profile', 'contacts'] as ProfileTab[]).map(t => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`flex-1 py-2.5 text-[13px] font-medium transition-colors duration-150 border-b-2 ${
-              tab === t
-                ? 'border-blue-600 text-blue-700'
-                : 'border-transparent text-gray-400 hover:text-gray-600'
-            }`}
-          >
-            {t === 'profile' ? 'Profile' : 'Contacts'}
-          </button>
-        ))}
-      </div>
+      <Tabs tabs={SETTINGS_TABS} active={tab} onChange={setTab} />
 
-      {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
 
         {tab === 'profile' && (
           <>
             {profile && (
               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-[13px] flex-shrink-0">
-                  {profile.username.slice(0, 2).toUpperCase()}
-                </div>
+                <Avatar
+                  username={profile.username}
+                  initials={profile.initials}
+                  avatarUrl={profile.avatar_url}
+                />
                 <div className="min-w-0">
                   <p className="text-[13px] font-medium text-gray-900 truncate">{profile.username}</p>
                   <p className="text-[12px] text-gray-500 truncate">{profile.email}</p>
@@ -233,9 +222,7 @@ export function Settings({ profile, onClose }: { profile: Profile | null; onClos
 
         {tab === 'contacts' && (
           <>
-            {loading && (
-              <p className="text-[12px] text-gray-400 text-center py-6">Loading…</p>
-            )}
+            {loading && <Loading />}
 
             {!loading && pendingIn.length > 0 && (
               <section>
@@ -274,19 +261,15 @@ export function Settings({ profile, onClose }: { profile: Profile | null; onClos
             )}
 
             {!loading && contacts.length === 0 && !addOpen && (
-              <p className="text-[12px] text-gray-400 text-center py-8">
-                No contacts yet.
-              </p>
+              <p className="text-[12px] text-gray-400 text-center py-8">No contacts yet.</p>
             )}
           </>
         )}
 
       </div>
 
-      {/* Footer — add button (Contacts tab only) */}
       {tab === 'contacts' && (
         <div className="flex-shrink-0 border-t border-gray-100 px-4 py-3 space-y-2">
-
           {addOpen && (
             <form onSubmit={handleAddContact} className="space-y-2">
               <input
@@ -319,13 +302,11 @@ export function Settings({ profile, onClose }: { profile: Profile | null; onClos
               </div>
             </form>
           )}
-
           {!addOpen && (
             <Button variant="secondary" onClick={() => setAddOpen(true)}>
               + Add a contact
             </Button>
           )}
-
         </div>
       )}
 

@@ -1,5 +1,8 @@
 import type { Message } from '../shared/messages'
 import type { CommentInboxItem, ShareContext } from '../shared/types'
+import { avatarColor, avatarInitials } from '../shared/utils'
+
+const PUBLIC_MODE = import.meta.env.VITE_PUBLIC_MODE_ENABLED !== 'false'
 
 // Inline Lucide SVGs — used in the Shadow DOM (no React available here)
 const SVG_X    = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`
@@ -9,23 +12,6 @@ const SVG_GLOBE   = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="
 const SVG_TRASH   = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`
 const SVG_RESOLVE = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>`
 
-// Avatar color palette — derived deterministically from the username
-const AVATAR_COLORS = [
-  '#2563EB', '#7C3AED', '#DB2777', '#DC2626',
-  '#D97706', '#059669', '#0891B2', '#4F46E5',
-]
-
-function avatarColor(username: string): string {
-  let hash = 0
-  for (let i = 0; i < username.length; i++) hash = username.charCodeAt(i) + ((hash << 5) - hash)
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
-}
-
-function avatarInitials(username: string): string {
-  const parts = username.trim().split(/[\s._-]+/).filter(Boolean)
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
-  return username.slice(0, 2).toUpperCase()
-}
 
 function buildPinElement(comment: CommentInboxItem): HTMLDivElement {
   const pin = document.createElement('div')
@@ -47,27 +33,26 @@ function buildPinElement(comment: CommentInboxItem): HTMLDivElement {
     const img = document.createElement('img')
     img.src = comment.from_avatar_url
     Object.assign(img.style, { width: '100%', height: '100%', objectFit: 'cover' })
-    // Fallback to initials if image fails to load
     img.onerror = () => {
       img.remove()
-      renderInitials(pin, comment.from_username)
+      renderInitials(pin, comment.from_username, comment.from_initials)
     }
     pin.appendChild(img)
   } else {
-    renderInitials(pin, comment.from_username)
+    renderInitials(pin, comment.from_username, comment.from_initials)
   }
 
   return pin
 }
 
-function renderInitials(el: HTMLElement, username: string) {
-  el.style.background = avatarColor(username)
-  el.style.color      = 'white'
-  el.style.fontSize   = '10px'
-  el.style.fontWeight = '700'
-  el.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+function renderInitials(el: HTMLElement, username: string, initials?: string | null) {
+  el.style.background    = avatarColor(username)
+  el.style.color         = 'white'
+  el.style.fontSize      = '10px'
+  el.style.fontWeight    = '700'
+  el.style.fontFamily    = '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
   el.style.letterSpacing = '0.02em'
-  el.textContent = avatarInitials(username)
+  el.textContent         = avatarInitials(username, initials)
 }
 
 // Prevent duplicate listeners if the script is re-injected
@@ -100,6 +85,10 @@ chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) =
   }
   return true
 })
+
+// Tell the SW we're ready — it will push SHOW_PINS if pinsVisible is on.
+// This is more reliable than relying on tabs.onUpdated timing.
+chrome.runtime.sendMessage({ type: 'CONTENT_READY' }).catch(() => { /* SW not yet awake, onUpdated will retry */ })
 
 checkShareContext()
 
@@ -220,7 +209,7 @@ function showComposerOverlay(pinX: number, pinY: number) {
       #body-area { padding: 10px 14px; }
       #message-input {
         width: 100%; border: 1px solid #e2e8f0; border-radius: 7px;
-        padding: 7px 10px; font-size: 13px; color: #0f172a;
+        padding: 7px 10px; font-size: 13px; color: #0f172a; background: #fff;
         resize: none; outline: none; font-family: inherit; line-height: 1.5;
         transition: border-color 0.15s, box-shadow 0.15s;
       }
@@ -244,6 +233,7 @@ function showComposerOverlay(pinX: number, pinY: number) {
       }
       #send:hover:not(:disabled) { background: #1d4ed8; }
       #send:disabled { opacity: 0.5; cursor: not-allowed; }
+      ${PUBLIC_MODE ? `
       #public-label {
         display: flex; align-items: center; gap: 6px;
         cursor: pointer; user-select: none; font-family: inherit;
@@ -264,6 +254,7 @@ function showComposerOverlay(pinX: number, pinY: number) {
         transition: left 0.2s;
       }
       #public-label.active #public-thumb { left: 15px; }
+      ` : ''}
     </style>
 
     <div id="backdrop"></div>
@@ -278,7 +269,7 @@ function showComposerOverlay(pinX: number, pinY: number) {
       </div>
       <div id="at-dropdown"></div>
       <div id="footer">
-        <label id="public-label"><div id="public-switch"><div id="public-thumb"></div></div>Public</label>
+        ${PUBLIC_MODE ? `<label id="public-label"><div id="public-switch"><div id="public-thumb"></div></div>Public</label>` : ''}
         <span id="status"></span>
         <button id="cancel">Cancel</button>
         <button id="send" style="display:flex;align-items:center;gap:5px;">Send ${SVG_SEND}</button>
@@ -295,13 +286,14 @@ function showComposerOverlay(pinX: number, pinY: number) {
   const msgInput   = shadow.getElementById('message-input') as HTMLTextAreaElement
   const atDropdown = shadow.getElementById('at-dropdown')!
   const statusEl   = shadow.getElementById('status')!
-  const publicLabel = shadow.getElementById('public-label') as HTMLLabelElement
-
   let isPublic = false
-  publicLabel.addEventListener('click', () => {
-    isPublic = !isPublic
-    publicLabel.classList.toggle('active', isPublic)
-  })
+  if (PUBLIC_MODE) {
+    const publicLabel = shadow.getElementById('public-label') as HTMLLabelElement
+    publicLabel.addEventListener('click', () => {
+      isPublic = !isPublic
+      publicLabel.classList.toggle('active', isPublic)
+    })
+  }
 
   function close() { host.remove() }
   backdrop.addEventListener('click', close)
@@ -572,7 +564,7 @@ async function showPinDetail(comment: CommentInboxItem, pinEl: HTMLElement) {
         </div>
         <button id="close-btn">${SVG_X}</button>
       </div>
-      <div id="body-text">${escapeHtml(comment.body)}</div>
+      <div id="body-text">${renderTaggedBody(comment.body)}</div>
       ${hasActions ? `
       <div id="actions">
         ${canResolve ? `<button class="action resolve" id="resolve-btn">${SVG_RESOLVE} Resolve</button>` : ''}
@@ -590,20 +582,38 @@ async function showPinDetail(comment: CommentInboxItem, pinEl: HTMLElement) {
 
   document.body.appendChild(host)
 
+  // Keep the panel anchored to the pin while the page scrolls
+  const panel = shadow.getElementById('panel') as HTMLDivElement
+  function repositionPanel() {
+    const r = pinEl.getBoundingClientRect()
+    let l = r.right + GAP
+    if (l + W > window.innerWidth - MARGIN) l = r.left - W - GAP
+    if (l < MARGIN) l = MARGIN
+    let t = r.top - 40
+    if (t < MARGIN) t = MARGIN
+    if (t + 380 > window.innerHeight - MARGIN) t = window.innerHeight - 380 - MARGIN
+    panel.style.left = `${l}px`
+    panel.style.top  = `${t}px`
+  }
+  window.addEventListener('scroll', repositionPanel, { passive: true })
+
   // Avatar
   const avatarEl = shadow.getElementById('avatar')!
   if (comment.from_avatar_url) {
     const img    = document.createElement('img')
     img.src      = comment.from_avatar_url
-    img.onerror  = () => { img.remove(); renderInitials(avatarEl, comment.from_username) }
+    img.onerror  = () => { img.remove(); renderInitials(avatarEl, comment.from_username, comment.from_initials) }
     avatarEl.appendChild(img)
   } else {
-    renderInitials(avatarEl, comment.from_username)
+    renderInitials(avatarEl, comment.from_username, comment.from_initials)
   }
 
   const backdrop = shadow.getElementById('backdrop')!
   const closeBtn = shadow.getElementById('close-btn')!
-  function close() { host.remove() }
+  function close() {
+    window.removeEventListener('scroll', repositionPanel)
+    host.remove()
+  }
   backdrop.addEventListener('click', close)
   closeBtn.addEventListener('click', close)
 
@@ -665,7 +675,7 @@ function showPins(comments: CommentInboxItem[], targetCommentId?: string) {
   if (pinResizeHandler) { window.removeEventListener('resize', pinResizeHandler); pinResizeHandler = null }
   if (comments.length === 0) return
 
-  comments.forEach(comment => {
+  comments.forEach((comment, index) => {
     const { docX, docY } = resolvePinPosition(comment)
 
     const pin = buildPinElement(comment)
@@ -704,6 +714,14 @@ function showPins(comments: CommentInboxItem[], targetCommentId?: string) {
     })
 
     document.body.appendChild(pin)
+
+    pin.animate(
+      [
+        { opacity: '0', transform: 'translate(-50%, -50%) scale(0.35)' },
+        { opacity: '1', transform: 'translate(-50%, -50%) scale(1)'    },
+      ],
+      { duration: 400, delay: index * 40, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', fill: 'both' },
+    )
   })
 
   // Recompute positions on each resize (debounce 80 ms)
@@ -866,7 +884,6 @@ async function checkShareContext() {
   const context    = result[storageKey] as ShareContext | undefined
   if (!context) return
 
-  chrome.runtime.sendMessage({ type: 'SHARE_CONTEXT_ACTIVE', payload: context })
   showShareBanner(context)
 }
 
@@ -917,6 +934,13 @@ function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
+function renderTaggedBody(text: string): string {
+  return escapeHtml(text).replace(
+    /#([A-Za-z0-9_]+)/g,
+    '<span style="color:#2563EB;font-weight:500;">#$1</span>',
+  )
 }
 
 } // end init()
