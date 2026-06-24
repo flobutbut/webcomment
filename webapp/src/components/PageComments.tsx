@@ -111,6 +111,11 @@ export function PageComments() {
   const handleSubmit = async () => {
     if (!message.trim() || !composer) return
 
+    if (message.includes('<') || author.includes('<')) {
+      setPostError('HTML is not allowed.')
+      return
+    }
+
     const lastPost = localStorage.getItem(RATE_LIMIT_KEY)
     if (lastPost && Date.now() - parseInt(lastPost) < RATE_LIMIT_MS) {
       setPostError('Wait a few minutes before posting again.')
