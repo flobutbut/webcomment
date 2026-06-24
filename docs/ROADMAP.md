@@ -83,6 +83,7 @@ Goal: send and receive a comment end-to-end, with link sharing.
 - [x] DB schema: `anchor_selector`, `anchor_x`, `anchor_y` columns on `comments`
 - [x] DB schema: `recipient_email` column + `email` value in enum on `comment_recipients`
 - [x] DB schema: `profiles.initials` column (≤ 2 chars) — stored at signup, surfaced as `from_initials` in `comment_inbox`
+- [x] DB schema: `profiles.baseline` column (text, nullable) — short bio shown on contact cards and search results instead of email
 - [x] DB security fix: `handle_new_user` trigger uses explicit `search_path = public` (SECURITY DEFINER safe)
 - [x] `comment_inbox` view: includes anchor fields (functional DOM anchoring from inbox)
 - [x] `comment_inbox` view: exposes `from_avatar_url` and `from_initials` for avatar display on pins
@@ -97,6 +98,7 @@ Goal: send and receive a comment end-to-end, with link sharing.
 - [x] `cleanup-screenshots` — purges orphan Storage files from `screenshot_cleanup_queue`
 - [x] `get-signed-url` — returns a fresh signed URL for a screenshot (auth required, owner or recipient only)
 - [x] `get-comment-page` — serves a comment as readable text (or JSON for the future webapp page); used by comment links (`/c/[id]`)
+- [x] `delete-account` — deletes the auth user via service role; cascades to `profiles`, `contacts`, `share_links`; `comments.from_user_id` set to null (comments kept as "Deleted user")
 
 ---
 
@@ -174,7 +176,7 @@ Public mode allows displaying comments visible to all extension users on the sam
 - [ ] Optional share link expiration
 - [ ] Remove debug logs from the `notify-email` function (`toEmails`, `errors`, `hasApiKey` fields)
 - [ ] `MARK_READ` by group: currently one `comment_recipients` row per group → plan one row per member for individual marking
-- [ ] Settings: profile editing (username, avatar) — profile display already done, editing not yet implemented
+- [x] Settings: profile editing — `baseline` (shown on contact cards) and avatar `initials` editable from the webapp Settings page; username and avatar photo not yet editable
 
 ---
 
@@ -191,6 +193,11 @@ Public mode allows displaying comments visible to all extension users on the sam
 - [x] `/` — landing page with install button, use cases, Supabase auth (login + signup)
 - [x] Interactive `PageComments` demo on the landing page — live pins, composer, Realtime insert/delete, delete-by-token, 5 min rate limit (`demo_comments` table, Realtime enabled)
 - [x] Deploy on Vercel (GitHub integration, auto-deploy on push to `main`)
+- [x] Full web dashboard at `/dashboard`: Inbox, My Comments, Contacts, Settings — with sidebar nav, search bar, filter by type, user menu
+- [x] Settings page: edit `baseline` and avatar `initials`; read-only account info (username, email, member since)
+- [x] Delete account: Danger zone in Settings — confirmation modal (type username), calls `delete-account` edge function, signs out and redirects home
+- [x] Shared `Button` (8 variants, 4 sizes) and `Input` components — design system for the dashboard
+- [ ] Rework Settings page layout — current single-column form to revisit (structure, visual hierarchy, sections)
 - [x] Extension detection (Option A): content script sets `data-webcomment-installed` on `<html>`; dashboard shows an amber install banner when the attribute is absent, dismissible via `localStorage`
 - [ ] Extension detection (Option B — `externally_connectable`): declare `"externally_connectable": { "matches": ["https://webcomment.app/*"] }` in the manifest; webapp calls `chrome.runtime.sendMessage(EXTENSION_ID, { type: "ping" }, cb)` to detect installation without relying on content-script injection. Requires a fixed extension ID (available post Chrome Web Store publish).
 - [ ] Custom domain (configure DNS at Hostinger → Vercel)
