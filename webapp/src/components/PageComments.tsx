@@ -123,21 +123,22 @@ export function PageComments() {
     }
 
     setSubmitting(true)
-    const { data, error } = await supabase
-      .from('demo_comments')
-      .insert({
-        x_pct: composer.xPct,
-        y_pct: composer.yPct,
-        message: message.trim().slice(0, 200),
-        author: author.trim().slice(0, 30) || null,
-      })
-      .select('id, delete_token')
-      .single()
+    const { data, error } = await supabase.rpc('create_demo_comment', {
+      p_x_pct: composer.xPct,
+      p_y_pct: composer.yPct,
+      p_message: message.trim().slice(0, 200),
+      p_author: author.trim().slice(0, 30) || null,
+    })
 
-    if (error || !data) {
-      setPostError('Failed to post. Try again.')
+    const row = Array.isArray(data) ? data[0] : data
+    if (error || !row) {
+      if (error?.message?.includes('Rate limit') || error?.message?.includes('full')) {
+        setPostError(error.message)
+      } else {
+        setPostError('Failed to post. Try again.')
+      }
     } else {
-      setDeleteToken(data.id, data.delete_token)
+      setDeleteToken(row.id, row.delete_token)
       localStorage.setItem(RATE_LIMIT_KEY, String(Date.now()))
       setComposer(null)
       setMessage('')
@@ -151,11 +152,10 @@ export function PageComments() {
     const token = getDeleteToken(pin.id)
     if (!token) return
 
-    const { error } = await supabase
-      .from('demo_comments')
-      .delete()
-      .eq('id', pin.id)
-      .eq('delete_token', token)
+    const { error } = await supabase.rpc('delete_demo_comment', {
+      p_id: pin.id,
+      p_token: token,
+    })
 
     if (!error) {
       setComments(prev => prev.filter(c => c.id !== pin.id))
