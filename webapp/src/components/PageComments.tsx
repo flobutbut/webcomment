@@ -43,8 +43,10 @@ export function PageComments() {
   const [submitting, setSubmitting] = useState(false)
   const [postError, setPostError] = useState('')
   const composerRef = useRef(composer)
+  const activePinRef = useRef(activePin)
 
   useEffect(() => { composerRef.current = composer }, [composer])
+  useEffect(() => { activePinRef.current = activePin }, [activePin])
 
   useEffect(() => {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
@@ -79,6 +81,11 @@ export function PageComments() {
 
       if (composerRef.current) {
         setComposer(null)
+        return
+      }
+
+      if (activePinRef.current) {
+        setActivePin(null)
         return
       }
 
