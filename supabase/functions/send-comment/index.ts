@@ -46,7 +46,8 @@ Deno.serve(async (req) => {
   const body: SendCommentBody = await req.json()
   const { comment_id, url, screenshot_path, pin_x, pin_y, anchor_path, anchor_selector, anchor_x, anchor_y, to } = body
 
-  const tags = [...new Set([...body.body.matchAll(/#([A-Za-z0-9_]+)/g)].map(m => m[1].toLowerCase()))]
+  const tags     = [...new Set([...body.body.matchAll(/#([A-Za-z0-9_]+)/g)].map(m => m[1].toLowerCase()))]
+  const mentions = [...new Set([...body.body.matchAll(/@([A-Za-z0-9_]+)/g)].map(m => m[1]))]
 
   // Générer l'URL signée (7 jours)
   const { data: signedData, error: signError } = await supabase.storage
@@ -131,6 +132,25 @@ Deno.serve(async (req) => {
           recipient_type:  'email',
           recipient_email: recipient.email,
         })
+      }
+    }
+  }
+
+  // Ajouter les @mentions comme destinataires directs (si pas déjà dans la liste)
+  if (mentions.length > 0) {
+    const explicitUserIds = new Set(
+      recipientRows.filter(r => r.recipient_type === 'user').map(r => r.recipient_id!)
+    )
+    const { data: mentionedProfiles } = await supabase
+      .from('profiles')
+      .select('id')
+      .in('username', mentions)
+      .neq('id', user.id)
+
+    for (const p of mentionedProfiles ?? []) {
+      if (!explicitUserIds.has(p.id)) {
+        recipientRows.push({ comment_id, recipient_type: 'user', recipient_id: p.id })
+        explicitUserIds.add(p.id)
       }
     }
   }

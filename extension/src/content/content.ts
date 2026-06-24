@@ -4,6 +4,9 @@ import { avatarColor, avatarInitials } from '../shared/utils'
 
 const PUBLIC_MODE = import.meta.env.VITE_PUBLIC_MODE_ENABLED !== 'false'
 
+// Signal extension presence to the host page (readable via data-webcomment-installed attribute)
+document.documentElement.setAttribute('data-webcomment-installed', 'true')
+
 async function safeSendMessage(message: Message): Promise<unknown> {
   try {
     return await chrome.runtime.sendMessage(message)

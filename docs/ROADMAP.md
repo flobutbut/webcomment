@@ -43,6 +43,7 @@ Goal: send and receive a comment end-to-end, with link sharing.
 
 ### Extension — Receiving
 - [x] Popup: Inbox view (list of received comments, excluding personal and public comments)
+- [x] **@mention in public comments** — `send-comment` parses `@username` tokens in the body; each mentioned user receives a `recipient_type='user'` row → the comment appears in their inbox (extension + webapp) even when the comment is public
 - [x] Popup: "My comments" view (list of sent comments, individual deletion)
 - [x] Badge showing number of unread comments (updated on popup open + via Realtime)
 - [x] Realtime: badge updated in real-time
@@ -190,6 +191,8 @@ Public mode allows displaying comments visible to all extension users on the sam
 - [x] `/` — landing page with install button, use cases, Supabase auth (login + signup)
 - [x] Interactive `PageComments` demo on the landing page — live pins, composer, Realtime insert/delete, delete-by-token, 5 min rate limit (`demo_comments` table, Realtime enabled)
 - [x] Deploy on Vercel (GitHub integration, auto-deploy on push to `main`)
+- [x] Extension detection (Option A): content script sets `data-webcomment-installed` on `<html>`; dashboard shows an amber install banner when the attribute is absent, dismissible via `localStorage`
+- [ ] Extension detection (Option B — `externally_connectable`): declare `"externally_connectable": { "matches": ["https://webcomment.app/*"] }` in the manifest; webapp calls `chrome.runtime.sendMessage(EXTENSION_ID, { type: "ping" }, cb)` to detect installation without relying on content-script injection. Requires a fixed extension ID (available post Chrome Web Store publish).
 - [ ] Custom domain (configure DNS at Hostinger → Vercel)
 - [ ] `/login` — dedicated auth page (email/password, same account as the extension)
 - [ ] `/dashboard` — inbox and "my comments" with filters (site, date, unread)

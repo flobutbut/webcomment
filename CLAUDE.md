@@ -102,6 +102,20 @@ Then update DNS at Hostinger: add a CNAME record pointing to `cname.vercel-dns.c
 - Always `escapeHtml()` before injecting `innerHTML` in the content script
 - Tags: stored as `text[]` on `comments.tags`; body text with `#hashtags` is rendered via `BodyWithTags` in Inbox.tsx
 
+## Changelog
+
+`CHANGELOG.md` at the repo root tracks every notable change per version.
+
+**`CHANGELOG.md` is also the release notes file.** When a user asks for a "release note", write it here.
+
+**Keep it up to date**: whenever a functional change is made (feature, fix, security, UI, DB schema, Edge Function), add an entry under `## [Unreleased]` with the format:
+
+```
+- Short description of what changed and why, scoped to the affected area (Extension / Webapp / Backend)
+```
+
+When a version is released (zip exported or version bumped in `manifest.json`), promote `[Unreleased]` to `## [x.y.z] — YYYY-MM-DD`.
+
 ## Reference docs
 
 - Architecture: `docs/ARCHITECTURE.md`
