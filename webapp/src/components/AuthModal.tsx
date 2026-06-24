@@ -26,7 +26,7 @@ function translateError(msg: string): string {
 
 const INPUT = `
   w-full px-3 py-2.5 rounded-lg text-sm
-  bg-[#0c0c0c] border border-[#222] text-white
+  bg-dark-800 border border-dark-border text-white
   placeholder:text-zinc-700
   focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600/20
   transition-colors
@@ -118,7 +118,7 @@ export function AuthModal({ initialMode = 'signin', onClose, onSuccess }: Props)
       onClick={onClose}
     >
       <div
-        className="bg-[#0f0f0f] border border-[#1e1e1e] rounded-2xl p-8 w-full max-w-sm mx-4 shadow-2xl"
+        className="bg-dark-700 border border-dark-border-sm rounded-2xl p-8 w-full max-w-sm mx-4 shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
         {done ? (
@@ -163,13 +163,13 @@ export function AuthModal({ initialMode = 'signin', onClose, onSuccess }: Props)
         ) : (
           <>
             <div className="flex items-center justify-between mb-6">
-              <div className="flex gap-1 bg-[#080808] border border-[#1e1e1e] rounded-lg p-1">
+              <div className="flex gap-1 bg-dark-900 border border-dark-border-sm rounded-lg p-1">
                 {(['signin', 'signup'] as const).map(m => (
                   <button
                     key={m}
                     onClick={() => switchMode(m)}
                     className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                      mode === m ? 'bg-[#1a1a1a] text-white' : 'text-zinc-600 hover:text-zinc-400'
+                      mode === m ? 'bg-dark-hover text-white' : 'text-zinc-600 hover:text-zinc-400'
                     }`}
                   >
                     {m === 'signin' ? 'Sign in' : 'Sign up'}
@@ -178,7 +178,7 @@ export function AuthModal({ initialMode = 'signin', onClose, onSuccess }: Props)
               </div>
               <button
                 onClick={onClose}
-                className="text-zinc-700 hover:text-zinc-400 transition-colors text-xl leading-none w-7 h-7 flex items-center justify-center rounded-md hover:bg-[#1a1a1a]"
+                className="text-zinc-700 hover:text-zinc-400 transition-colors text-xl leading-none w-7 h-7 flex items-center justify-center rounded-md hover:bg-dark-hover"
               >
                 ×
               </button>
@@ -188,12 +188,12 @@ export function AuthModal({ initialMode = 'signin', onClose, onSuccess }: Props)
 
               {/* Username + avatar preview tile */}
               {mode === 'signup' && (
-                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-[#0c0c0c] border border-[#222]">
+                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-dark-800 border border-dark-border">
                   <div className="relative group/avatar flex-shrink-0 cursor-text">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-150 ${
                       avatarLetters
                         ? 'bg-blue-600/20 group-hover/avatar:bg-blue-600/30 has-[:focus]:ring-2 has-[:focus]:ring-blue-500/40 has-[:focus]:ring-offset-1 has-[:focus]:ring-offset-[#0c0c0c]'
-                        : 'border-2 border-dashed border-[#333] group-hover/avatar:border-[#555] has-[:focus]:border-blue-600 has-[:focus]:border-solid'
+                        : 'border-2 border-dashed border-dark-border-xl group-hover/avatar:border-zinc-500 has-[:focus]:border-blue-600 has-[:focus]:border-solid'
                     }`}>
                       <input
                         type="text"
@@ -207,7 +207,7 @@ export function AuthModal({ initialMode = 'signin', onClose, onSuccess }: Props)
                       />
                     </div>
                     {/* Pencil badge — visible on hover, hidden when editing */}
-                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[#1c1c1c] border border-[#333] flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 group-focus-within/avatar:opacity-0 transition-opacity duration-150 pointer-events-none">
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-dark-subtle border border-dark-border-xl flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 group-focus-within/avatar:opacity-0 transition-opacity duration-150 pointer-events-none">
                       <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -277,7 +277,7 @@ export function AuthModal({ initialMode = 'signin', onClose, onSuccess }: Props)
                       <EyeIcon open={showPass} />
                     </button>
                   </div>
-                  <p className="font-mono text-[10px] text-zinc-600 -mt-1 px-1">min. 6 characters</p>
+                  <p className="font-mono text-xs text-zinc-600 -mt-1 px-1">min. 6 characters</p>
                 </>
               )}
 

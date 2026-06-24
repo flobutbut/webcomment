@@ -4,6 +4,7 @@ export interface Profile {
   id:         string
   username:   string
   email:      string
+  baseline:   string | null
   avatar_url: string | null
   initials:   string | null
   created_at: string
@@ -43,7 +44,7 @@ export interface SentComment {
 export interface ContactProfile {
   id:         string
   username:   string
-  email:      string
+  baseline:   string | null
   avatar_url: string | null
   initials?:  string | null
 }

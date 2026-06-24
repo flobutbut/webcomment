@@ -62,7 +62,7 @@ export function DashboardLayout() {
     if (!session) return
     supabase
       .from('profiles')
-      .select('id, username, email, avatar_url, initials, created_at')
+      .select('id, username, email, baseline, avatar_url, initials, created_at')
       .eq('id', session.user.id)
       .single()
       .then(({ data }) => setProfile(data))
@@ -122,8 +122,8 @@ export function DashboardLayout() {
       <div className="flex flex-1 min-h-0 overflow-hidden">
 
       {/* ── Sidebar ──────────────────────────────────────────── */}
-      <aside className="w-56 flex-shrink-0 bg-white border-r border-gray-100 flex flex-col overflow-hidden">
-        <div className="h-14 flex items-center px-4 border-b border-gray-100 flex-shrink-0">
+      <aside className="w-56 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
+        <div className="h-14 flex items-center px-4 border-b border-gray-200 flex-shrink-0">
           <span className="font-mono text-xs font-bold tracking-widest text-gray-900">WEBCOMMENT</span>
         </div>
 
@@ -132,13 +132,13 @@ export function DashboardLayout() {
           <NavItem to="/dashboard/my-comments" icon={<MessageSquare className="w-4 h-4" />} label="My Comments" />
           <NavItem to="/dashboard/contacts"    icon={<Users         className="w-4 h-4" />} label="Contacts"    />
 
-          <div className="my-2 border-t border-gray-100" />
+          <div className="my-2 border-t border-gray-200" />
 
           <NavItem to="/dashboard/groups" icon={<UsersRound className="w-4 h-4" />} label="Groups" comingSoon />
           <NavItem to="/dashboard/feed"   icon={<Rss        className="w-4 h-4" />} label="Feed"   comingSoon />
         </nav>
 
-        <div className="p-3 border-t border-gray-100 space-y-0.5 bg-white flex-shrink-0">
+        <div className="p-3 border-t border-gray-200 space-y-0.5 bg-white flex-shrink-0">
           <NavItem to="/dashboard/whats-new" icon={<Sparkles className="w-4 h-4" />} label="What's new" comingSoon />
           <NavItem to="/dashboard/settings"  icon={<Settings  className="w-4 h-4" />} label="Settings"   />
         </div>
@@ -147,7 +147,7 @@ export function DashboardLayout() {
       {/* ── Main ─────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
-        <header className="h-14 flex-shrink-0 bg-white border-b border-gray-100 flex items-center px-6">
+        <header className="h-14 flex-shrink-0 bg-white border-b border-gray-200 flex items-center px-6">
           <div className="flex-1" />
           <div className="flex-1 flex justify-center">
             <SearchBar

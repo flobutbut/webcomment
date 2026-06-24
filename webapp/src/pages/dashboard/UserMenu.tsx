@@ -39,7 +39,7 @@ export function UserMenu({ profile, session }: { profile: Profile | null; sessio
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div className="absolute right-0 top-full mt-1.5 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[160px]">
-            <div className="px-3 py-2 border-b border-gray-100">
+            <div className="px-3 py-2 border-b border-gray-200">
               <p className="text-xs font-semibold text-gray-900 truncate">{username}</p>
               <p className="text-[11px] text-gray-400 truncate">{session.user.email}</p>
             </div>

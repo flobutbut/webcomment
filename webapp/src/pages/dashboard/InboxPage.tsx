@@ -86,7 +86,7 @@ export function InboxPage() {
         ) : (
           <div>
             {filtered.map((comment, i) => (
-              <div key={comment.recipient_id} className={i > 0 ? 'border-t border-gray-100' : ''}>
+              <div key={comment.recipient_id} className={i > 0 ? 'border-t border-gray-200' : ''}>
                 <CommentDetail
                   url={comment.url}
                   created_at={comment.created_at}

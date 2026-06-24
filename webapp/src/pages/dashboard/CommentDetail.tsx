@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ExternalLink, Link2, Check, Trash2, ImageOff } from 'lucide-react'
 import { hostname } from '../../lib/utils'
 import { Avatar } from '../../components/Avatar'
+import { Button } from '../../components/Button'
 
 interface CommentDetailProps {
   url:            string
@@ -21,7 +22,7 @@ interface CommentDetailProps {
 function Screenshot({ url, pinX, pinY }: { url: string; pinX: number; pinY: number }) {
   const [err, setErr] = useState(false)
   return (
-    <div className="relative rounded-xl overflow-hidden border border-gray-100 bg-gray-50">
+    <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
       {err ? (
         <div className="w-full h-48 flex items-center justify-center">
           <ImageOff className="w-6 h-6 text-gray-300" />
@@ -38,8 +39,6 @@ function Screenshot({ url, pinX, pinY }: { url: string; pinX: number; pinY: numb
     </div>
   )
 }
-
-const ACTION_BTN = 'flex items-center gap-1.5 px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors'
 
 export function CommentDetail({
   url, created_at, screenshot_url, pin_x, pin_y, body,
@@ -93,50 +92,50 @@ export function CommentDetail({
         {/* Actions */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {onOpenPage && (
-            <button onClick={onOpenPage} title="Open page" className={ACTION_BTN}>
+            <Button variant="outline" size="sm" onClick={onOpenPage} title="Open page">
               <ExternalLink className="w-3.5 h-3.5" />
               Open
-            </button>
+            </Button>
           )}
-          <button onClick={handleCopy} title="Copy link" className={ACTION_BTN}>
+          <Button variant="outline" size="sm" onClick={handleCopy} title="Copy link">
             {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Link2 className="w-3.5 h-3.5" />}
             {copied ? 'Copied' : 'Copy'}
-          </button>
+          </Button>
           {onResolve && (
-            <button
+            <Button
+              variant="success-outline"
+              size="sm"
               onClick={handleResolve}
               disabled={resolving}
               title="Resolve"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs border border-green-200 rounded-lg text-green-700 hover:bg-green-50 transition-colors disabled:opacity-50"
             >
               <Check className="w-3.5 h-3.5" />
               {resolving ? '…' : 'Resolve'}
-            </button>
+            </Button>
           )}
           {onDelete && !confirming && (
-            <button
+            <Button
+              variant="ghost-danger"
+              size="sm"
               onClick={() => setConfirming(true)}
               title="Delete"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg text-gray-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" />
-            </button>
+            </Button>
           )}
           {onDelete && confirming && (
             <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => setConfirming(false)}
-                className="px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors"
-              >
+              <Button variant="outline" size="sm" onClick={() => setConfirming(false)}>
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
                 onClick={handleDelete}
                 disabled={deleting}
-                className="px-2.5 py-1.5 text-xs bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50"
               >
                 {deleting ? '…' : 'Delete'}
-              </button>
+              </Button>
             </div>
           )}
         </div>
@@ -145,7 +144,7 @@ export function CommentDetail({
       {/* Capture + URL caption */}
       <div>
         <Screenshot url={screenshot_url} pinX={pin_x} pinY={pin_y} />
-        <p className="text-[11px] text-gray-400 mt-2 truncate">{hostname(url)}</p>
+        <p className="text-xs text-gray-400 mt-2 truncate">{hostname(url)}</p>
       </div>
 
       {/* Comment */}

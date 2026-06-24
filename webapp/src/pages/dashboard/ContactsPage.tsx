@@ -5,6 +5,9 @@ import { supabase } from '../../lib/supabase'
 import { Spinner } from '../../components/Spinner'
 import { Avatar } from '../../components/Avatar'
 import { EmptyState } from '../../components/EmptyState'
+import { PageHeader } from '../../components/PageHeader'
+import { Button } from '../../components/Button'
+import { Input } from '../../components/Input'
 import { CommentDetail } from './CommentDetail'
 import type { Contact, ContactProfile, SentComment, DashboardContext } from '../../lib/types'
 
@@ -37,7 +40,7 @@ function ContactDetail({ contact, currentUserId, onAccept, onDecline, onRemove }
     <div className="h-full overflow-y-auto">
 
       {/* Horizontal banner */}
-      <div className="flex items-center gap-4 px-6 py-4 border-b border-gray-100">
+      <div className="flex items-center gap-4 px-6 py-4 border-b border-gray-200">
         <Avatar
           username={other.username}
           initials={(other as ContactProfile).initials}
@@ -46,29 +49,20 @@ function ContactDetail({ contact, currentUserId, onAccept, onDecline, onRemove }
         />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-gray-900 truncate">{other.username}</p>
-          <p className="text-xs text-gray-400 truncate">{other.email}</p>
+          {other.baseline && <p className="text-xs text-gray-400 truncate">{other.baseline}</p>}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {contact.status === 'pending' && isAddressee && (
             <>
-              <button onClick={() => onAccept(contact.id)}
-                className="px-3 py-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
-                Accept
-              </button>
-              <button onClick={() => onDecline(contact.id)}
-                className="px-3 py-1.5 text-xs border border-gray-200 text-gray-500 rounded-lg hover:bg-gray-50 transition-colors">
-                Decline
-              </button>
+              <Button variant="primary" size="sm" onClick={() => onAccept(contact.id)}>Accept</Button>
+              <Button variant="outline" size="sm" onClick={() => onDecline(contact.id)}>Decline</Button>
             </>
           )}
           {contact.status === 'pending' && !isAddressee && (
             <span className="text-xs text-gray-400">Request sent</span>
           )}
           {contact.status === 'accepted' && (
-            <button onClick={() => onRemove(contact.id)}
-              className="px-3 py-1.5 text-xs border border-red-100 text-red-400 hover:bg-red-50 rounded-lg transition-colors">
-              Remove
-            </button>
+            <Button variant="danger-outline" size="sm" onClick={() => onRemove(contact.id)}>Remove</Button>
           )}
         </div>
       </div>
@@ -81,7 +75,7 @@ function ContactDetail({ contact, currentUserId, onAccept, onDecline, onRemove }
       ) : (
         <div>
           {comments.map((c, i) => (
-            <div key={c.id} className={i > 0 ? 'border-t border-gray-100' : ''}>
+            <div key={c.id} className={i > 0 ? 'border-t border-gray-200' : ''}>
               <CommentDetail
                 url={c.url}
                 created_at={c.created_at}
@@ -125,7 +119,7 @@ function ContactListItem({ contact, currentUserId, selected, onClick }: {
       />
       <div className="min-w-0 flex-1 text-left">
         <p className="text-sm font-medium text-gray-900 truncate">{other.username}</p>
-        <p className="text-xs text-gray-400 truncate">{other.email}</p>
+        {other.baseline && <p className="text-xs text-gray-400 truncate">{other.baseline}</p>}
       </div>
       {contact.status === 'pending' && isAddressee && (
         <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
@@ -158,8 +152,8 @@ export function ContactsPage() {
       .from('contacts')
       .select(`
         id, status, created_at,
-        requester:profiles!contacts_requester_id_fkey(id, username, email, avatar_url, initials),
-        addressee:profiles!contacts_addressee_id_fkey(id, username, email, avatar_url, initials)
+        requester:profiles!contacts_requester_id_fkey(id, username, baseline, avatar_url, initials),
+        addressee:profiles!contacts_addressee_id_fkey(id, username, baseline, avatar_url, initials)
       `)
       .in('status', ['pending', 'accepted'])
       .order('created_at', { ascending: false })
@@ -244,36 +238,33 @@ export function ContactsPage() {
     if (!search) return true
     const q = search.toLowerCase()
     const other = c.addressee.id === userId ? c.requester : c.addressee
-    return other.username.toLowerCase().includes(q) || other.email.toLowerCase().includes(q)
+    return other.username.toLowerCase().includes(q) || (other.baseline ?? '').toLowerCase().includes(q)
   }
 
-  const SECTION_LABEL = 'px-4 pt-4 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider'
+  const SECTION_LABEL = 'px-4 pt-4 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider'
 
   return (
     <div className="flex flex-col h-full">
-      {/* Page header */}
-      <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
-        <h1 className="text-sm font-semibold text-gray-900">Contacts</h1>
-        <button
-          onClick={() => setAddOpen(o => !o)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
-        >
-          <UserPlus className="w-3.5 h-3.5" /> Add
-        </button>
-      </div>
+      <PageHeader
+        title="Contacts"
+        right={
+          <Button variant="outline" size="sm" onClick={() => setAddOpen(o => !o)}>
+            <UserPlus className="w-3.5 h-3.5" /> Add
+          </Button>
+        }
+      />
 
       {/* Add contact form */}
       {addOpen && (
-        <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex-shrink-0">
+        <div className="px-5 py-3 border-b border-gray-200 bg-gray-50 flex-shrink-0">
           <form onSubmit={handleAddContact} className="flex gap-2 items-start">
             <div className="flex-1 space-y-1.5">
-              <input
+              <Input
                 ref={inputRef}
                 type="text"
                 value={query}
                 onChange={e => { setQuery(e.target.value); setAddStatus(null) }}
                 placeholder="Username or email"
-                className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400/30"
               />
               {addStatus && (
                 <p className={`text-xs ${
@@ -282,14 +273,12 @@ export function ContactsPage() {
                 }`}>{addStatus.msg}</p>
               )}
             </div>
-            <button type="submit" disabled={adding || !query.trim()}
-              className="px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50">
+            <Button type="submit" variant="primary" size="md" disabled={adding || !query.trim()}>
               {adding ? '…' : 'Send'}
-            </button>
-            <button type="button" onClick={() => setAddOpen(false)}
-              className="px-3 py-2 text-sm border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
+            </Button>
+            <Button type="button" variant="outline" size="md" onClick={() => setAddOpen(false)}>
               ✕
-            </button>
+            </Button>
           </form>
         </div>
       )}
@@ -298,7 +287,7 @@ export function ContactsPage() {
       <div className="flex flex-1 overflow-hidden">
 
         {/* List */}
-        <div className="w-80 flex-shrink-0 border-r border-gray-100 overflow-y-auto">
+        <div className="w-80 flex-shrink-0 border-r border-gray-200 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-20"><Spinner /></div>
           ) : contacts.length === 0 ? (
@@ -308,7 +297,7 @@ export function ContactsPage() {
               {pendingIn.filter(filterContact).length > 0 && (
                 <div>
                   <p className={SECTION_LABEL}>Requests received</p>
-                  <div className="divide-y divide-gray-100">
+                  <div className="divide-y divide-gray-200">
                     {pendingIn.filter(filterContact).map(c => (
                       <ContactListItem key={c.id} contact={c} currentUserId={userId}
                         selected={selected?.id === c.id} onClick={() => setSelected(c)} />
@@ -319,7 +308,7 @@ export function ContactsPage() {
               {accepted.filter(filterContact).length > 0 && (
                 <div>
                   <p className={SECTION_LABEL}>My contacts</p>
-                  <div className="divide-y divide-gray-100">
+                  <div className="divide-y divide-gray-200">
                     {accepted.filter(filterContact).map(c => (
                       <ContactListItem key={c.id} contact={c} currentUserId={userId}
                         selected={selected?.id === c.id} onClick={() => setSelected(c)} />
@@ -330,7 +319,7 @@ export function ContactsPage() {
               {pendingOut.filter(filterContact).length > 0 && (
                 <div>
                   <p className={SECTION_LABEL}>Sent requests</p>
-                  <div className="divide-y divide-gray-100">
+                  <div className="divide-y divide-gray-200">
                     {pendingOut.filter(filterContact).map(c => (
                       <ContactListItem key={c.id} contact={c} currentUserId={userId}
                         selected={selected?.id === c.id} onClick={() => setSelected(c)} />

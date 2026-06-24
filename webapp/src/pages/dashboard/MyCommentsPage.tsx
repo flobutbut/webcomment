@@ -14,12 +14,12 @@ function ScreenshotThumb({ url, pinX, pinY }: { url: string; pinX: number; pinY:
   return (
     <div className="relative w-14 h-10 flex-shrink-0">
       {err ? (
-        <div className="w-14 h-10 bg-gray-50 rounded border border-gray-100 flex items-center justify-center">
+        <div className="w-14 h-10 bg-gray-50 rounded border border-gray-200 flex items-center justify-center">
           <ImageOff className="w-3 h-3 text-gray-300" />
         </div>
       ) : (
         <>
-          <img src={url} className="w-14 h-10 object-cover rounded border border-gray-100" alt="" onError={() => setErr(true)} />
+          <img src={url} className="w-14 h-10 object-cover rounded border border-gray-200" alt="" onError={() => setErr(true)} />
           <div className="absolute w-2.5 h-2.5 rounded-full bg-blue-600 border border-white shadow-sm"
             style={{ left: `${pinX}%`, top: `${pinY}%`, transform: 'translate(-50%, -50%)' }} />
         </>
@@ -84,13 +84,13 @@ export function MyCommentsPage() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* List */}
-        <div className="w-80 flex-shrink-0 border-r border-gray-100 overflow-y-auto">
+        <div className="w-80 flex-shrink-0 border-r border-gray-200 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-20"><Spinner /></div>
           ) : filtered.length === 0 ? (
             <EmptyState message={search ? 'No results.' : 'No comments sent yet.'} variant="list" />
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-gray-200">
               {filtered.map(comment => (
                 <div
                   key={comment.id}

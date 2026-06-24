@@ -18,12 +18,12 @@ function Thumb({ url, pinX, pinY }: { url: string; pinX: number; pinY: number })
   return (
     <div className="relative w-12 h-8 flex-shrink-0">
       {err ? (
-        <div className="w-12 h-8 bg-gray-50 rounded border border-gray-100 flex items-center justify-center">
+        <div className="w-12 h-8 bg-gray-50 rounded border border-gray-200 flex items-center justify-center">
           <ImageOff className="w-3 h-3 text-gray-300" />
         </div>
       ) : (
         <>
-          <img src={url} className="w-12 h-8 object-cover rounded border border-gray-100" alt="" onError={() => setErr(true)} />
+          <img src={url} className="w-12 h-8 object-cover rounded border border-gray-200" alt="" onError={() => setErr(true)} />
           <div className="absolute w-2 h-2 rounded-full bg-blue-600 border border-white shadow-sm"
             style={{ left: `${pinX}%`, top: `${pinY}%`, transform: 'translate(-50%,-50%)' }} />
         </>
@@ -34,7 +34,7 @@ function Thumb({ url, pinX, pinY }: { url: string; pinX: number; pinY: number })
 
 function SectionHeader({ label, count }: { label: string; count: number }) {
   return (
-    <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+    <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
       <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{label}</span>
       <span className="text-[10px] text-gray-400">{count}</span>
     </div>
@@ -54,7 +54,7 @@ function ContactCard({ contact, userId }: { contact: Contact; userId: string }) 
         />
         <div className="min-w-0">
           <p className="text-sm font-semibold text-gray-900">{other.username}</p>
-          <p className="text-xs text-gray-400">{other.email}</p>
+          {other.baseline && <p className="text-xs text-gray-400">{other.baseline}</p>}
           {contact.status === 'pending' && (
             <span className="inline-block mt-1 text-[10px] font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
               Pending
@@ -96,8 +96,8 @@ export function SearchResultsPage({ userId, search, filterTypes }: {
       supabase
         .from('contacts')
         .select(`id, status, created_at,
-          requester:profiles!contacts_requester_id_fkey(id, username, email, avatar_url, initials),
-          addressee:profiles!contacts_addressee_id_fkey(id, username, email, avatar_url, initials)`)
+          requester:profiles!contacts_requester_id_fkey(id, username, baseline, avatar_url, initials),
+          addressee:profiles!contacts_addressee_id_fkey(id, username, baseline, avatar_url, initials)`)
         .in('status', ['pending', 'accepted'])
         .order('created_at', { ascending: false }),
     ]).then(([inboxRes, sentRes, contactsRes]) => {
@@ -129,7 +129,7 @@ export function SearchResultsPage({ userId, search, filterTypes }: {
   const filteredContacts = active.has('user')
     ? contacts.filter(c => {
         const other = c.addressee.id === userId ? c.requester : c.addressee
-        return other.username.toLowerCase().includes(q) || other.email.toLowerCase().includes(q)
+        return other.username.toLowerCase().includes(q) || (other.baseline ?? '').toLowerCase().includes(q)
       })
     : []
 
@@ -157,8 +157,8 @@ export function SearchResultsPage({ userId, search, filterTypes }: {
     <div className="flex h-full overflow-hidden">
 
       {/* ── List ── */}
-      <div className="w-80 flex-shrink-0 border-r border-gray-100 flex flex-col overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+      <div className="w-80 flex-shrink-0 border-r border-gray-200 flex flex-col overflow-hidden">
+        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
           <p className="text-xs text-gray-500">
             Results for <span className="font-semibold text-gray-900">"{search}"</span>
           </p>
@@ -173,7 +173,7 @@ export function SearchResultsPage({ userId, search, filterTypes }: {
               {filteredInbox.length > 0 && (
                 <section>
                   <SectionHeader label="Inbox" count={filteredInbox.length} />
-                  <div className="divide-y divide-gray-100">
+                  <div className="divide-y divide-gray-200">
                     {filteredInbox.map(c => {
                       const sel: Selected = { kind: 'inbox', item: c }
                       return (
@@ -197,7 +197,7 @@ export function SearchResultsPage({ userId, search, filterTypes }: {
               {filteredSent.length > 0 && (
                 <section>
                   <SectionHeader label="My Comments" count={filteredSent.length} />
-                  <div className="divide-y divide-gray-100">
+                  <div className="divide-y divide-gray-200">
                     {filteredSent.map(c => {
                       const sel: Selected = { kind: 'sent', item: c }
                       return (
@@ -220,7 +220,7 @@ export function SearchResultsPage({ userId, search, filterTypes }: {
               {filteredContacts.length > 0 && (
                 <section>
                   <SectionHeader label="Contacts" count={filteredContacts.length} />
-                  <div className="divide-y divide-gray-100">
+                  <div className="divide-y divide-gray-200">
                     {filteredContacts.map(c => {
                       const other = c.addressee.id === userId ? c.requester : c.addressee
                       const sel: Selected = { kind: 'contact', item: c }
@@ -234,7 +234,7 @@ export function SearchResultsPage({ userId, search, filterTypes }: {
                           />
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-semibold text-gray-900 truncate">{other.username}</p>
-                            <p className="text-[11px] text-gray-400 truncate">{other.email}</p>
+                            {other.baseline && <p className="text-xs text-gray-400 truncate">{other.baseline}</p>}
                           </div>
                           {c.status === 'pending' && (
                             <span className="text-[10px] text-gray-400 flex-shrink-0">pending</span>

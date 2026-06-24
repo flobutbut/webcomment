@@ -11,13 +11,30 @@ Format: `## [version] — YYYY-MM-DD`, most recent first.
 
 ## [0.5.0] — 2026-06-24
 
-### Backend
-- Add `contacts` table migration (was missing from repo despite existing on prod DB): RLS, FK constraints with exact PostgREST-hint names, Realtime enabled
-- Fix contacts unique constraint: replaced directional `UNIQUE(requester_id, addressee_id)` with pair-based `UNIQUE(least, greatest)` to prevent concurrent duplicate requests
-- `send-comment` edge function now parses `@username` tokens in the comment body and inserts a `recipient_type='user'` row for each mentioned user — public comments that @mention someone appear in their inbox (extension + webapp)
+### Webapp — Design System
+- Add shared `Button` component (8 variants, 4 sizes) — standardizes all action buttons across the dashboard
+- Add shared `Input` component (light theme) with unified focus ring — replaces inline classes in dashboard forms
+- Add `@theme` block in `index.css` with named CSS custom properties for all dark theme tokens
+- Raise dashboard dividers and borders from `gray-100` to `gray-200` for better visibility
+- `CommentDetail`, `ContactsPage`, `AuthModal`: migrate to shared components and design tokens
+
+### Webapp — Profiles
+- Add `baseline` field on contact cards and search results, replacing the email address
+- Settings page: profile form to edit baseline and avatar initials
+
+### Webapp — Account
+- Settings: "Delete account" button in a Danger zone section — opens a confirmation modal requiring the user to type their username; explains that sent comments are kept as "Deleted user"
+- On confirm: calls the `delete-account` edge function, signs out, redirects to home
 
 ### Webapp
 - Extension detection: content script sets `data-webcomment-installed` on `<html>`; dashboard shows an amber banner when the extension is absent, with a link to install it and a permanent dismiss (localStorage)
+
+### Backend
+- Add `delete-account` edge function — deletes the auth user via service role; cascades to `profiles`, `contacts`, `share_links`; `comments.from_user_id` set to null (ON DELETE SET NULL, already in place)
+- Add `baseline text` column to `profiles` table
+- Add `contacts` table migration (was missing from repo despite existing on prod DB): RLS, FK constraints with exact PostgREST-hint names, Realtime enabled
+- Fix contacts unique constraint: replaced directional `UNIQUE(requester_id, addressee_id)` with pair-based `UNIQUE(least, greatest)` to prevent concurrent duplicate requests
+- `send-comment` edge function now parses `@username` tokens in the comment body and inserts a `recipient_type='user'` row for each mentioned user — public comments that @mention someone appear in their inbox (extension + webapp)
 
 ---
 
