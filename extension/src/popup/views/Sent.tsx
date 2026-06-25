@@ -6,8 +6,9 @@ import trash2Icon     from '@iconify-icons/lucide/trash-2'
 import checkIcon      from '@iconify-icons/lucide/check'
 import link2Icon      from '@iconify-icons/lucide/link-2'
 import imageOffIcon   from '@iconify-icons/lucide/image-off'
-import { Button }  from '../components/Button'
-import { Loading } from '../components/Loading'
+import { Button }   from '../components/Button'
+import { Loading }  from '../components/Loading'
+import { BodyText } from '../components/BodyText'
 import { supabase } from '../../shared/supabase'
 import type { SentComment } from '../../shared/types'
 import { hostname, timeAgo, commentLinkUrl } from '../../shared/utils'
@@ -106,7 +107,7 @@ function Detail({
         </div>
         <div>
           <p className="text-[11px] text-gray-400 mb-1">{new Date(comment.created_at).toLocaleString('en-US')}</p>
-          <p className="text-[13px] text-gray-700 leading-relaxed">{comment.body}</p>
+          <BodyText body={comment.body} mentions={comment.mentions} />
         </div>
 
         {confirming ? (
@@ -154,7 +155,7 @@ export function Sent({ userId, onCommentDeleted }: { userId: string; onCommentDe
   useEffect(() => {
     supabase
       .from('comments')
-      .select('id, url, body, screenshot_url, pin_x, pin_y, created_at')
+      .select('id, url, body, mentions, screenshot_url, pin_x, pin_y, created_at')
       .eq('from_user_id', userId)
       .order('created_at', { ascending: false })
       .then(({ data }) => {

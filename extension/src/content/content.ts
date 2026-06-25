@@ -28,6 +28,7 @@ const SVG_TRASH   = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="
 const SVG_RESOLVE = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>`
 const SVG_BACK    = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>`
 const SVG_USER    = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`
+const SVG_FOLLOW  = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>`
 
 
 function buildPinElement(comment: CommentInboxItem): HTMLDivElement {
@@ -645,11 +646,11 @@ async function showPinDetail(comment: CommentInboxItem, pinEl: HTMLElement) {
         </div>
         <button id="close-btn" title="Esc">${SVG_X}</button>
       </div>
-      <div id="body-text">${renderTaggedBody(comment.body)}</div>
+      <div id="body-text">${renderTaggedBody(comment.body, comment.mentions)}</div>
       ${hasActions ? `
       <div id="actions">
         ${canDismiss ? `<button class="action dismiss"  id="dismiss-btn">${SVG_CHECK} Dismiss</button>`  : ''}
-        ${canProfile ? `<button class="action profile"  id="profile-btn">${SVG_USER}  Profil</button>`   : ''}
+        ${canProfile ? `<button class="action profile"  id="profile-btn">${SVG_USER}  Profile</button>`   : ''}
         ${canDelete  ? `<button class="action delete"   id="delete-btn">${SVG_TRASH}  Delete</button>`   : ''}
       </div>
       <div id="confirm-area">
@@ -723,7 +724,7 @@ async function showPinDetail(comment: CommentInboxItem, pinEl: HTMLElement) {
       payload: { recipientId: recipientId! },
     }) as { error?: string }
     if (!res?.error) {
-      showToast('Commentaire masqué', true)
+      showToast('Comment dismissed', true)
       close()
     } else {
       dismissBtn.disabled = false
@@ -848,26 +849,35 @@ async function showUserProfile(comment: CommentInboxItem, pinEl: HTMLElement) {
       #add-contact-btn:hover:not(:disabled) { background: #1d4ed8; }
       #add-contact-btn:disabled { opacity: 0.6; cursor: default; }
       #add-contact-btn.sent { background: #16a34a; }
+      #follow-btn {
+        width: 100%; border: 1px solid #2563EB; border-radius: 7px; cursor: pointer;
+        padding: 7px 12px; font-size: 12px; font-weight: 500; font-family: inherit;
+        background: #fff; color: #2563EB; transition: all 0.1s;
+        display: flex; align-items: center; justify-content: center; gap: 4px;
+      }
+      #follow-btn:hover:not(:disabled) { background: #eff6ff; }
+      #follow-btn:disabled { opacity: 0.6; cursor: default; }
+      #follow-btn.following { background: #f0fdf4; color: #16a34a; border-color: #16a34a; cursor: default; }
       #popup-cta { font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.5; }
     </style>
     <div id="backdrop"></div>
     <div id="panel">
       <div id="header">
-        <button id="back-btn" title="Retour au commentaire">${SVG_BACK}</button>
-        <span id="header-title">Profil</span>
-        <button id="close-btn" title="Fermer">${SVG_X}</button>
+        <button id="back-btn" title="Back to comment">${SVG_BACK}</button>
+        <span id="header-title">Profile</span>
+        <button id="close-btn" title="Close">${SVG_X}</button>
       </div>
       <div id="profile-section">
         <div id="avatar"></div>
         <div id="username">@${escapeHtml(comment.from_username)}</div>
       </div>
       <div id="comments-section">
-        <div id="comments-header">Commentaires publics</div>
-        <div id="comments-list"><div id="empty-msg">Chargement…</div></div>
+        <div id="comments-header">Public comments</div>
+        <div id="comments-list"><div id="empty-msg">Loading…</div></div>
       </div>
       <div id="footer">
-        <button id="add-contact-btn" disabled>Chargement…</button>
-        <div id="popup-cta">Ouvrez l'extension pour gérer vos contacts</div>
+        <button id="add-contact-btn" disabled>Loading…</button>
+        <div id="popup-cta">Open the extension to manage your contacts</div>
       </div>
     </div>
   `
@@ -914,8 +924,9 @@ async function showUserProfile(comment: CommentInboxItem, pinEl: HTMLElement) {
 
   type ProfileComment = { comment_id: string; body: string; url: string; created_at: string }
   type ProfileResult  = {
-    comments?: ProfileComment[]
+    comments?:      ProfileComment[]
     contactStatus?: string
+    followStatus?:  string
     isCurrentUser?: boolean
     error?: string
   }
@@ -930,9 +941,9 @@ async function showUserProfile(comment: CommentInboxItem, pinEl: HTMLElement) {
   const SVG_EXT = `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>`
 
   if (!res || res.error) {
-    commentsList.innerHTML = '<div id="empty-msg">Impossible de charger.</div>'
+    commentsList.innerHTML = '<div id="empty-msg">Could not load.</div>'
   } else if (!res.comments || res.comments.length === 0) {
-    commentsList.innerHTML = '<div id="empty-msg">Aucun commentaire public.</div>'
+    commentsList.innerHTML = '<div id="empty-msg">No public comments.</div>'
   } else {
     commentsList.innerHTML = ''
     res.comments.forEach(c => {
@@ -960,13 +971,13 @@ async function showUserProfile(comment: CommentInboxItem, pinEl: HTMLElement) {
   if (res?.isCurrentUser) {
     addContactBtn.remove()
   } else if (res?.contactStatus === 'accepted') {
-    addContactBtn.textContent = 'Déjà contact ✓'
+    addContactBtn.textContent = 'Already a contact ✓'
     addContactBtn.disabled = true
   } else if (res?.contactStatus === 'pending') {
-    addContactBtn.textContent = 'Invitation envoyée'
+    addContactBtn.textContent = 'Request sent'
     addContactBtn.disabled = true
   } else {
-    addContactBtn.textContent = '+ Ajouter aux contacts'
+    addContactBtn.textContent = '+ Add to contacts'
     addContactBtn.disabled = false
     addContactBtn.addEventListener('click', async () => {
       addContactBtn.disabled = true
@@ -976,13 +987,44 @@ async function showUserProfile(comment: CommentInboxItem, pinEl: HTMLElement) {
         payload: { addresseeId: comment.from_user_id! },
       }) as { success?: boolean; error?: string }
       if (addRes?.success) {
-        addContactBtn.textContent = 'Invitation envoyée ✓'
+        addContactBtn.textContent = 'Request sent ✓'
         addContactBtn.classList.add('sent')
       } else {
-        addContactBtn.textContent = '+ Ajouter aux contacts'
+        addContactBtn.textContent = '+ Add to contacts'
         addContactBtn.disabled = false
       }
     })
+  }
+
+  // Follow button (public mode only, not on own profile, not if already a contact)
+  if (PUBLIC_MODE && !res?.isCurrentUser && comment.from_user_id && res?.contactStatus !== 'accepted') {
+    const followBtn = document.createElement('button')
+    followBtn.id = 'follow-btn'
+    const footer = shadow.getElementById('footer')!
+    footer.insertBefore(followBtn, addContactBtn.isConnected ? addContactBtn : null)
+
+    if (res?.followStatus === 'following') {
+      followBtn.innerHTML = `${SVG_FOLLOW} Following ✓`
+      followBtn.classList.add('following')
+      followBtn.disabled = true
+    } else {
+      followBtn.innerHTML = `${SVG_FOLLOW} Follow`
+      followBtn.addEventListener('click', async () => {
+        followBtn.disabled = true
+        followBtn.textContent = '…'
+        const r = await safeSendMessage({
+          type: 'ADD_FOLLOW',
+          payload: { followedId: comment.from_user_id! },
+        }) as { success?: boolean }
+        if (r?.success) {
+          followBtn.innerHTML = `${SVG_FOLLOW} Following ✓`
+          followBtn.classList.add('following')
+        } else {
+          followBtn.innerHTML = `${SVG_FOLLOW} Follow`
+          followBtn.disabled = false
+        }
+      })
+    }
   }
 }
 
@@ -1363,11 +1405,12 @@ function escapeHtml(str: string): string {
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
-function renderTaggedBody(text: string): string {
-  return escapeHtml(text).replace(
-    /#([A-Za-z0-9_]+)/g,
-    '<span style="color:#2563EB;font-weight:500;">#$1</span>',
-  )
+function renderTaggedBody(text: string, mentions: { id: string; username: string }[] = []): string {
+  const map      = new Map(mentions.map(m => [m.id, m.username]))
+  const resolved = text.replace(/@\[([0-9a-f-]{36})\]/g, (_, id) => `@${map.get(id) ?? '[unknown]'}`)
+  return escapeHtml(resolved)
+    .replace(/#([A-Za-z0-9_]+)/g,  '<span style="color:#2563EB;font-weight:500;">#$1</span>')
+    .replace(/@([A-Za-z0-9_]+)/g,  '<span style="color:#7C3AED;font-weight:500;">@$1</span>')
 }
 
 } // end init()

@@ -1,3 +1,8 @@
+export function resolveBody(body: string, mentions: { id: string; username: string }[] = []): string {
+  const map = new Map(mentions.map(m => [m.id, m.username]))
+  return body.replace(/@\[([0-9a-f-]{36})\]/g, (_, id) => `@${map.get(id) ?? '[unknown]'}`)
+}
+
 export function hostname(url: string): string {
   try { return new URL(url).hostname } catch { return url }
 }

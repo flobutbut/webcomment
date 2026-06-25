@@ -120,31 +120,41 @@ Called by the service worker after the capture upload. Handles atomic insertion 
   "screenshot_path": "uuid-user/uuid-comment.webp",
   "pin_x":           42.5,
   "pin_y":           67.1,
-  "body":            "What do you think of this pricing?",
+  "anchor_path":     "...",        // optional: rich DOM path JSON
+  "anchor_selector": "div > p",   // optional: CSS selector
+  "anchor_x":        12.3,        // optional: % relative to anchor element
+  "anchor_y":        45.6,        // optional: % relative to anchor element
+  "body":            "What do you think of this #pricing?",
   "to": [
-    { "type": "user",  "id": "uuid-bob" },
-    { "type": "group", "id": "uuid-design-team" },
-    { "type": "email", "email": "alice@example.com" }
+    { "type": "user",   "id": "uuid-bob" },
+    { "type": "group",  "id": "uuid-design-team" },
+    { "type": "email",  "email": "alice@example.com" },
+    { "type": "public" }
   ]
 }
 ```
 
 `comment_id` is generated client-side (service worker) to allow the screenshot upload before calling this function.
 
+`tags` are auto-extracted from `#hashtags` in `body`. `@username` mentions in `body` are also auto-resolved to user recipients.
+
 **Processing**
 
 ```
 1. Verify JWT → retrieve from_user_id
 2. Generate a signed URL for the screenshot (7 days)
-3. INSERT into comments
-4. For each recipient:
-   - "user"  → INSERT comment_recipients (recipient_type=user, recipient_id=id)
-   - "group" → INSERT group row + resolve members → INSERT user rows
-   - "email" → look up profile by email:
-               · found → INSERT as "user"
-               · not found → INSERT (recipient_type=email, recipient_email=address)
-5. Call notify-email
-6. Return { comment_id }
+3. Extract #tags and @mentions from body
+4. INSERT into comments (with tags, anchor fields)
+5. For each recipient in "to":
+   - "user"   → INSERT comment_recipients (recipient_type=user, recipient_id=id)
+   - "group"  → INSERT group row + resolve members → INSERT user rows
+   - "email"  → look up profile by email:
+                · found → INSERT as "user"
+                · not found → INSERT (recipient_type=email, recipient_email=address)
+   - "public" → INSERT (recipient_type=public)
+6. Resolve @mentions → INSERT as "user" if not already in recipients list
+7. Call notify-email
+8. Return { comment_id }
 ```
 
 **Response**
@@ -211,6 +221,89 @@ Regenerates a signed URL for an existing capture (useful if the 7-day URL has ex
 ```json
 { "url": "https://xxxx.supabase.co/storage/v1/object/sign/..." }
 ```
+
+### `delete-account`
+
+Permanently deletes the authenticated user's account via the Supabase Admin API. Comments sent by the user are kept in the database (attributed to "Deleted user" via `ON DELETE SET NULL` on `comments.from_user_id`).
+
+**Endpoint**: `POST /functions/v1/delete-account`
+
+**Headers**: `Authorization: Bearer <user_jwt>`
+
+**Body**: none
+
+**Processing**
+
+```
+1. Verify JWT
+2. supabase.auth.admin.deleteUser(user.id)
+   → cascades: profiles, contacts, share_links, comment_recipients
+   → comments.from_user_id SET NULL
+3. Return { ok: true }
+```
+
+**Response**
+
+```json
+{ "ok": true }
+```
+
+After success, the client calls `supabase.auth.signOut()` and redirects to `/`.
+
+---
+
+### `cleanup-screenshots`
+
+Drains the `screenshot_cleanup_queue` table and deletes corresponding Storage objects. Called on demand (not on a cron schedule).
+
+**Endpoint**: `POST /functions/v1/cleanup-screenshots`
+
+**Headers**: `Authorization: Bearer <user_jwt>` (any authenticated user can trigger it)
+
+**Processing**
+
+```
+1. SELECT up to 100 rows from screenshot_cleanup_queue ORDER BY created_at ASC
+2. supabase.storage.from('screenshots').remove(paths) — non-fatal if file already gone
+3. DELETE from screenshot_cleanup_queue WHERE id IN (...)
+4. Return { deleted: N }
+```
+
+**Response**
+
+```json
+{ "deleted": 3 }
+```
+
+---
+
+### `get-comment-page`
+
+Returns comment metadata for a given `comment_id`. Used by the webapp and shared links to render a standalone comment view. Accessible without auth (uses service role).
+
+**Endpoint**: `GET /functions/v1/get-comment-page?id=<uuid>&format=json`
+
+**Parameters**:
+- `id` — comment UUID (required)
+- `format=json` — returns JSON; omit for a plain-text fallback (browsers without the extension)
+
+**Response (JSON)**
+
+```json
+{
+  "username":       "alice",
+  "body":           "What do you think of this section?",
+  "date":           "15 juin 2024",
+  "screenshot_url": "https://xxxx.supabase.co/storage/v1/object/sign/...",
+  "pin_x":          42.5,
+  "pin_y":          67.1,
+  "url":            "https://example.com/dashboard"
+}
+```
+
+Signed URL expires in 1 hour.
+
+---
 
 ## Realtime (Supabase)
 

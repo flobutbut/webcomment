@@ -22,16 +22,17 @@
 └───────────────────────────┼────────────────────────────┘
                             │
 ┌───────────────────────────┼────────────────────────────┐
-│             Web App  (webcomment.app)  [Phase 4]        │
+│             Web App  (webcomment.app)                   │
 │                           │                             │
 │  ┌──────────────────────────────────────────────────┐  │
-│  │  Next.js / React — same Supabase JS client       │  │
+│  │  Vite + React + Tailwind — same Supabase client  │  │
 │  │                                                  │  │
-│  │  / (landing + install)                           │  │
-│  │  /dashboard  → inbox, captures, filters          │  │
-│  │  /groups     → create, invite, manage            │  │
-│  │  /settings   → profile, workspaces               │  │
-│  │  /s/:token   → share link resolution             │  │
+│  │  / (landing + demo)                              │  │
+│  │  /dashboard/inbox       → received comments      │  │
+│  │  /dashboard/my-comments → sent comments          │  │
+│  │  /dashboard/contacts    → contacts               │  │
+│  │  /dashboard/settings    → profile settings       │  │
+│  │  /s/:token              → share link resolve     │  │
 │  └──────────────────────────────────────────────────┘  │
 └───────────────────────────┼────────────────────────────┘
                             │ Supabase JS Client
@@ -48,9 +49,11 @@
 │  └──────────┘  └──────────┘  └────────┘  └─────────┘ │
 │                                                         │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │              Edge Functions                      │   │
-│  │  send-comment | notify-email                    │   │
-│  │  create-share-link | resolve-share-link         │   │
+│  │              Edge Functions                     │   │
+│  │  send-comment | notify-email                   │   │
+│  │  create-share-link | resolve-share-link        │   │
+│  │  get-signed-url | get-comment-page             │   │
+│  │  delete-account | cleanup-screenshots          │   │
 │  └─────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -82,27 +85,31 @@ Responsibilities:
 
 ### Popup UI (`popup/`)
 
-Main React interface, 360×480 px.
+Main React interface, 360×560 px.
 
 ```
 ┌──────────────────────────────┐
-│  WebComment    [↗ Share]   ⚙ │  ← header
+│  WebComment  [Pins] [👤]     │  ← header (Pins toggle + user icon)
 ├──────────────────────────────┤
-│  [  Inbox  ] [My comments ]  │  ← tabs
+│  [  Inbox  ] [My comments ]  │  ← tabs (hidden in settings mode)
 ├──────────────────────────────┤
 │                              │
 │   Active view                │
-│   (Inbox or My comments)     │
+│   (Inbox, My comments,       │
+│    or Settings)              │
 │                              │
 ├──────────────────────────────┤
-│  [+ New comment]             │  ← fixed footer
+│  [+ New comment  Alt+Shift+N]│  ← fixed footer
+│  [↗ Open web app]            │
 └──────────────────────────────┘
 ```
 
 - **Inbox**: list of received comments, sorted by date, with thumbnail and read/unread indicator.
 - **My comments**: list of sent comments, with thumbnail, hostname, message preview.
-- **Settings** (⚙ icon): replaces the tab content. Shows profile and sign-out button.
-- **New comment**: button in footer. Closes the popup, puts the content script into pin picker mode. If the content script is absent (page opened before the extension), automatic re-injection via `chrome.scripting.executeScript`.
+- **Settings** (user icon in header): replaces the tab content. Shows profile, contacts, and sign-out. A red badge on the icon counts pending contact requests.
+- **Pins toggle**: show/hide comment pins on the active page. State persisted in `chrome.storage.local`.
+- **New comment**: button in footer (keyboard shortcut `Alt+Shift+N`). Closes the popup, puts the content script into pin picker mode. If the content script is absent, automatic re-injection via `chrome.scripting.executeScript`.
+- **Open web app**: link in footer, opens the webapp at `/dashboard` with an auth hash token for seamless SSO.
 
 ## Session — sharing between contexts
 
@@ -162,44 +169,69 @@ Option C — user clicks "Open page" from the inbox:
   → if page KO: replacement screen with the screenshot
 ```
 
-## Web App (`webapp/`) — Phase 4
+## Web App (`webapp/`)
 
-Web interface complementing the extension. Same Supabase backend, zero infrastructure duplication.
+Web interface complementing the extension. Same Supabase backend, deployed on Vercel at `webcomment.app`.
 
 ### Role
 
 The extension remains the only tool for **creating** anchored comments (screenshot, pin picker). The web app covers what the popup can't do well:
 
-| Extension (popup 360×480) | Web App |
+| Extension (popup 360×560) | Web App |
 |---|---|
-| Create a comment | View and filter all captures |
-| See latest received | Manage groups and invitations |
-| Toggle pins on active page | Portal for recipients without the extension |
-| — | Profile, workspaces, advanced settings |
+| Create a comment | Full-screen inbox with search & filters |
+| See latest received | Contact management |
+| Toggle pins on active page | Profile settings (username, initials, baseline) |
+| — | Portal for recipients without the extension |
 
-### Planned routes
+### Routes
 
 ```
-/                → landing + install extension button
-/login           → auth (shared with the extension via Supabase session)
-/dashboard       → inbox + "my comments" with filters (site, date, unread)
-/groups          → create a group, invite, manage members
-/settings        → profile, avatar, workspaces (Phase 5)
-/s/:token        → share link resolution (redirects to target page)
-/shared/:token   → screenshot view for recipients without the extension
+/                     → landing + install extension button + live demo
+/dashboard            → redirects to /dashboard/inbox
+/dashboard/inbox      → received comments, full view, mark read/resolved
+/dashboard/my-comments → sent comments
+/dashboard/contacts   → contacts list, pending requests, accept/decline
+/dashboard/settings   → profile (username, initials, baseline), email change, delete account
+/s/:token             → share link resolution (redirects to target page)
 ```
 
-### Planned stack
+Routes `groups`, `feed`, `whats-new` are listed in the sidebar as "coming soon".
 
-- **Next.js** (App Router) + React + Tailwind — same design system as the extension
-- Deployed on Vercel at `webcomment.app`
-- Shared Supabase auth — one account, accessible from both the extension and the web
+### Stack
+
+- **Vite + React 18 + Tailwind CSS** — deployed on Vercel (auto-deploy from `main`)
+- **lucide-react** for icons (not @iconify — different from the extension)
+- Root directory in Vercel: `webapp/`
+- Shared Supabase auth — SSO with the extension via hash token (`/dashboard#access_token=...`)
+
+### Dashboard layout
+
+Sidebar navigation (256 px) + main area with top header bar (search + user menu).
+
+```
+┌─────────────────┬───────────────────────────────────────┐
+│ WEBCOMMENT      │  [Search + filters]        [UserMenu] │  ← header 56px
+├─────────────────┼───────────────────────────────────────┤
+│ Inbox           │                                       │
+│ My Comments     │   <Outlet /> — active route content   │
+│ Contacts        │                                       │
+│ ─────────────── │                                       │
+│ Groups (soon)   │                                       │
+│ Feed (soon)     │                                       │
+│ ─────────────── │                                       │
+│ What's new (s.) │                                       │
+│ Settings        │                                       │
+└─────────────────┴───────────────────────────────────────┘
+```
+
+An amber banner prompts users to install the extension if `useExtensionInstalled()` returns `false` (dismissible, persisted in `localStorage`).
 
 ### Inter-component dependencies
 
-- No backend changes required: all existing tables and Edge Functions are sufficient
-- The `/s/:token` link is already handled by `resolve-share-link` — the web app just needs to redirect
-- Screenshots remain in the private Supabase bucket; the web app uses `get-signed-url` like the extension
+- No new backend required: all tables and Edge Functions are shared with the extension
+- The `/s/:token` link is handled by `resolve-share-link`
+- Screenshots remain in the private bucket; `get-signed-url` is used for expired URLs
 
 ## Security
 

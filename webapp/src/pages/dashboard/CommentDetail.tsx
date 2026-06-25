@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { ExternalLink, Link2, Check, Trash2, ImageOff } from 'lucide-react'
 import { hostname } from '../../lib/utils'
-import { Avatar } from '../../components/Avatar'
-import { Button } from '../../components/Button'
+import { Avatar }    from '../../components/Avatar'
+import { Button }    from '../../components/Button'
+import { BodyText }  from '../../components/BodyText'
+import type { Mention } from '../../lib/types'
 
 interface CommentDetailProps {
   url:            string
@@ -11,6 +13,7 @@ interface CommentDetailProps {
   pin_x:          number
   pin_y:          number
   body:           string
+  mentions?:        Mention[]
   from_username?:   string
   from_avatar_url?: string | null
   from_initials?:   string | null
@@ -41,7 +44,7 @@ function Screenshot({ url, pinX, pinY }: { url: string; pinX: number; pinY: numb
 }
 
 export function CommentDetail({
-  url, created_at, screenshot_url, pin_x, pin_y, body,
+  url, created_at, screenshot_url, pin_x, pin_y, body, mentions = [],
   from_username, from_avatar_url, from_initials,
   onOpenPage, onResolve, onDelete,
 }: CommentDetailProps) {
@@ -148,7 +151,7 @@ export function CommentDetail({
       </div>
 
       {/* Comment */}
-      <p className="text-sm text-gray-700 leading-relaxed">{body}</p>
+      <BodyText body={body} mentions={mentions} className="text-sm text-gray-700 leading-relaxed" />
 
     </div>
   )

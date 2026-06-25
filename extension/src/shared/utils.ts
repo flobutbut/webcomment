@@ -16,6 +16,11 @@ export function commentLinkUrl(commentId: string): string {
   return `${import.meta.env.VITE_SUPABASE_URL as string}/functions/v1/get-comment-page?id=${commentId}`
 }
 
+export function resolveBody(body: string, mentions: { id: string; username: string }[] = []): string {
+  const map = new Map(mentions.map(m => [m.id, m.username]))
+  return body.replace(/@\[([0-9a-f-]{36})\]/g, (_, id) => `@${map.get(id) ?? '[unknown]'}`)
+}
+
 export const AVATAR_COLORS = [
   '#2563EB', '#7C3AED', '#DB2777', '#DC2626',
   '#D97706', '#059669', '#0891B2', '#4F46E5',

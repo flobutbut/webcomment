@@ -87,7 +87,9 @@ Base grid: **4 px**.
 
 ```
 ┌──────────────────────────────┐  ← 360px
-│ Header                       │  ← 48px, white background, gray-100 bottom border
+│ Header  [Pins] [👤●]         │  ← 48px, white bg, gray-100 bottom border
+│                              │     Pins = pill toggle (blue-50 when active)
+│                              │     👤 = user icon button (red badge for pending contacts)
 ├──────────────────────────────┤
 │ Tabs Inbox / My comments     │  ← flex-shrink-0
 ├──────────────────────────────┤
@@ -95,7 +97,9 @@ Base grid: **4 px**.
 │ Scrollable area              │  ← flex-1, overflow-y-auto
 │                              │
 ├──────────────────────────────┤
-│ Footer (New comment)         │  ← flex-shrink-0, px-4 py-3, top border
+│ Footer (New comment + link)  │  ← flex-shrink-0, px-4 py-3, top border
+│                              │     Button: "+ New comment  Alt+Shift+N"
+│                              │     Link: "↗ Open web app" (gray-400, hover blue-500)
 └──────────────────────────────┘  ← 560px total
 ```
 

@@ -11,17 +11,17 @@ type Recipient =
   | { type: 'public' }
 
 interface SendCommentBody {
-  comment_id:      string
-  url:             string
-  screenshot_path: string
-  pin_x:           number
-  pin_y:           number
+  comment_id:       string
+  url:              string
+  screenshot_path:  string
+  pin_x:            number
+  pin_y:            number
   anchor_path?:     string
   anchor_selector?: string
   anchor_x?:        number
   anchor_y?:        number
-  body:            string
-  to:              Recipient[]
+  body:             string
+  to:               Recipient[]
 }
 
 Deno.serve(async (req) => {
@@ -34,7 +34,6 @@ Deno.serve(async (req) => {
     })
   }
 
-  // Auth
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) return new Response('Unauthorized', { status: 401 })
 
@@ -43,19 +42,41 @@ Deno.serve(async (req) => {
   )
   if (authError || !user) return new Response('Unauthorized', { status: 401 })
 
-  const body: SendCommentBody = await req.json()
-  const { comment_id, url, screenshot_path, pin_x, pin_y, anchor_path, anchor_selector, anchor_x, anchor_y, to } = body
+  const payload: SendCommentBody = await req.json()
+  const {
+    comment_id, url, screenshot_path, pin_x, pin_y,
+    anchor_path, anchor_selector, anchor_x, anchor_y, to,
+  } = payload
 
-  const tags     = [...new Set([...body.body.matchAll(/#([A-Za-z0-9_]+)/g)].map(m => m[1].toLowerCase()))]
-  const mentions = [...new Set([...body.body.matchAll(/@([A-Za-z0-9_]+)/g)].map(m => m[1]))]
+  const tags        = [...new Set([...payload.body.matchAll(/#([A-Za-z0-9_]+)/g)].map(m => m[1].toLowerCase()))]
+  const rawMentions = [...new Set([...payload.body.matchAll(/@([A-Za-z0-9_]+)/g)].map(m => m[1]))]
 
-  // Générer l'URL signée (7 jours)
+  // Resolve @username → @[uuid] so mentions survive username renames
+  let processedBody = payload.body
+  const mentionsData: { id: string; username: string }[] = []
+
+  if (rawMentions.length > 0) {
+    const { data: mentionedProfiles } = await supabase
+      .from('profiles')
+      .select('id, username')
+      .in('username', rawMentions)
+      .neq('id', user.id)
+
+    for (const p of (mentionedProfiles ?? []) as { id: string; username: string }[]) {
+      processedBody = processedBody.replace(
+        new RegExp(`@${p.username}(?=[^A-Za-z0-9_]|$)`, 'g'),
+        `@[${p.id}]`,
+      )
+      mentionsData.push({ id: p.id, username: p.username })
+    }
+  }
+
+  // Signed screenshot URL (7 days)
   const { data: signedData, error: signError } = await supabase.storage
     .from('screenshots')
     .createSignedUrl(screenshot_path, 60 * 60 * 24 * 7)
   if (signError) return new Response(signError.message, { status: 500 })
 
-  // Insérer le commentaire
   const { error: insertError } = await supabase
     .from('comments')
     .insert({
@@ -70,87 +91,76 @@ Deno.serve(async (req) => {
       anchor_selector: anchor_selector ?? null,
       anchor_x:        anchor_x        ?? null,
       anchor_y:        anchor_y        ?? null,
-      body:            body.body,
+      body:            processedBody,
       tags,
+      mentions:        mentionsData,
     })
   if (insertError) return new Response(insertError.message, { status: 500 })
 
-  // Résoudre les destinataires
+  // Build recipient rows
   const recipientRows: {
-    comment_id:      string
-    recipient_type:  string
-    recipient_id?:   string
+    comment_id:       string
+    recipient_type:   string
+    recipient_id?:    string
     recipient_email?: string
   }[] = []
 
   for (const recipient of to) {
     if (recipient.type === 'public') {
       recipientRows.push({ comment_id, recipient_type: 'public' })
-      continue
-    } else if (recipient.type === 'user') {
-      recipientRows.push({
-        comment_id,
-        recipient_type: 'user',
-        recipient_id:   recipient.id,
-      })
-    } else if (recipient.type === 'group') {
-      recipientRows.push({
-        comment_id,
-        recipient_type: 'group',
-        recipient_id:   recipient.id,
-      })
 
+      // Fan-out to all followers so the comment lands in their inbox
+      const { data: followers } = await supabase
+        .from('follows')
+        .select('follower_id')
+        .eq('followed_id', user.id)
+
+      for (const f of (followers ?? []) as { follower_id: string }[]) {
+        recipientRows.push({ comment_id, recipient_type: 'follow', recipient_id: f.follower_id })
+      }
+      continue
+    }
+
+    if (recipient.type === 'user') {
+      recipientRows.push({ comment_id, recipient_type: 'user', recipient_id: recipient.id })
+      continue
+    }
+
+    if (recipient.type === 'group') {
+      recipientRows.push({ comment_id, recipient_type: 'group', recipient_id: recipient.id })
       const { data: members } = await supabase
         .from('group_members')
         .select('user_id')
         .eq('group_id', recipient.id)
-
-      for (const m of members ?? []) {
-        recipientRows.push({
-          comment_id,
-          recipient_type: 'user',
-          recipient_id:   m.user_id,
-        })
+      for (const m of (members ?? []) as { user_id: string }[]) {
+        recipientRows.push({ comment_id, recipient_type: 'user', recipient_id: m.user_id })
       }
-    } else if (recipient.type === 'email') {
-      // Chercher si cet email correspond à un profil existant
+      continue
+    }
+
+    if (recipient.type === 'email') {
       const { data: profile } = await supabase
         .from('profiles')
         .select('id')
         .eq('email', recipient.email)
         .maybeSingle()
-
       if (profile) {
-        recipientRows.push({
-          comment_id,
-          recipient_type: 'user',
-          recipient_id:   profile.id,
-        })
+        recipientRows.push({ comment_id, recipient_type: 'user', recipient_id: (profile as { id: string }).id })
       } else {
-        recipientRows.push({
-          comment_id,
-          recipient_type:  'email',
-          recipient_email: recipient.email,
-        })
+        recipientRows.push({ comment_id, recipient_type: 'email', recipient_email: recipient.email })
       }
     }
   }
 
-  // Ajouter les @mentions comme destinataires directs (si pas déjà dans la liste)
-  if (mentions.length > 0) {
-    const explicitUserIds = new Set(
+  // Add @mention targets as direct recipients (deduped against existing rows)
+  if (mentionsData.length > 0) {
+    const explicitIds = new Set(
       recipientRows.filter(r => r.recipient_type === 'user').map(r => r.recipient_id!)
     )
-    const { data: mentionedProfiles } = await supabase
-      .from('profiles')
-      .select('id')
-      .in('username', mentions)
-      .neq('id', user.id)
-
-    for (const p of mentionedProfiles ?? []) {
-      if (!explicitUserIds.has(p.id)) {
-        recipientRows.push({ comment_id, recipient_type: 'user', recipient_id: p.id })
-        explicitUserIds.add(p.id)
+    for (const m of mentionsData) {
+      if (!explicitIds.has(m.id)) {
+        recipientRows.push({ comment_id, recipient_type: 'user', recipient_id: m.id })
+        explicitIds.add(m.id)
       }
     }
   }
@@ -160,7 +170,6 @@ Deno.serve(async (req) => {
     .insert(recipientRows)
   if (recipError) return new Response(recipError.message, { status: 500 })
 
-  // Envoyer les emails de notification
   await supabase.functions.invoke('notify-email', {
     body: { comment_id, from_user_id: user.id },
   })

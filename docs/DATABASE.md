@@ -12,6 +12,8 @@ create table profiles (
   username    text unique not null,
   email       text not null,
   avatar_url  text,
+  initials    text check (char_length(initials) <= 2),  -- up to 2 chars, user-editable
+  baseline    text,                                      -- short bio / tagline (max 80 chars)
   created_at  timestamptz default now()
 );
 ```
@@ -51,27 +53,34 @@ Comment anchored on a web page.
 
 ```sql
 create table comments (
-  id              uuid primary key default gen_random_uuid(),
-  from_user_id    uuid not null references profiles(id) on delete cascade,
-  url             text not null,
-  screenshot_url  text not null,       -- signed Supabase Storage URL
-  screenshot_path text not null,       -- raw path in the bucket
-  pin_x           float4 not null,     -- horizontal % on the screenshot (0-100)
-  pin_y           float4 not null,     -- vertical % on the screenshot (0-100)
-  body            text not null,
-  created_at      timestamptz default now()
+  id               uuid primary key default gen_random_uuid(),
+  from_user_id     uuid references profiles(id) on delete set null,  -- nullable: deleted users become "Deleted user"
+  url              text not null,
+  screenshot_url   text not null,        -- signed Supabase Storage URL
+  screenshot_path  text not null,        -- raw path in the bucket
+  pin_x            float4 not null,      -- horizontal % on the screenshot (0-100)
+  pin_y            float4 not null,      -- vertical % on the screenshot (0-100)
+  anchor_selector  text,                 -- CSS selector of the anchor element
+  anchor_x         float4,              -- horizontal % relative to the anchor element
+  anchor_y         float4,              -- vertical % relative to the anchor element
+  anchor_path      text,                -- rich DOM path JSON (replaces CSS selector approach)
+  body             text not null,
+  tags             text[] not null default '{}',  -- auto-extracted #hashtags from body
+  created_at       timestamptz default now()
 );
 
 -- Index to retrieve comments for a URL quickly
 create index comments_url_idx on comments (url);
 ```
 
+Tags are extracted server-side by `send-comment` via regex `/#([A-Za-z0-9_]+)/g` — the client never sets them directly.
+
 ### `comment_recipients`
 
 Who a comment is addressed to. A comment can have multiple recipients (individual users, groups, or unregistered email addresses).
 
 ```sql
-create type comment_recipient_type as enum ('user', 'group', 'email');
+create type comment_recipient_type as enum ('user', 'group', 'email', 'public');
 
 create table comment_recipients (
   id               uuid primary key default gen_random_uuid(),
@@ -89,24 +98,29 @@ create index cr_comment_idx   on comment_recipients (comment_id);
 ```
 
 **Rules**:
-- `recipient_type = 'user'`  → `recipient_id` = profile UUID, `recipient_email` = null
-- `recipient_type = 'group'` → `recipient_id` = group UUID, `recipient_email` = null
-- `recipient_type = 'email'` → `recipient_id` = null, `recipient_email` = raw address
+- `recipient_type = 'user'`   → `recipient_id` = profile UUID, `recipient_email` = null
+- `recipient_type = 'group'`  → `recipient_id` = group UUID, `recipient_email` = null
+- `recipient_type = 'email'`  → `recipient_id` = null, `recipient_email` = raw address
+- `recipient_type = 'public'` → `recipient_id` = null, `recipient_email` = null; visible to all authenticated users
 
 When `send-comment` receives a recipient `{ type: 'email', email }`, it first checks whether the email matches an existing profile: if so, it inserts as `user`; otherwise, it inserts as `email` so that `notify-email` can send a direct email.
 
+`@username` mentions in the comment body are auto-resolved to `user` recipients by `send-comment` (regex `/@([A-Za-z0-9_]+)/g`).
+
 ## Denormalized view
 
-View used by the extension inbox: resolves group recipients into individual members.
+View used by the extension inbox and webapp: resolves group recipients into individual members. Handles deleted users (COALESCE) and public comments (`auth.uid()`).
 
 ```sql
 create view comment_inbox as
 select
-  cr.id              as recipient_id,
-  c.id               as comment_id,
+  cr.id                                              as recipient_id,
+  c.id                                               as comment_id,
   c.from_user_id,
-  p.username         as from_username,
-  p.email            as from_email,
+  coalesce(p.username, 'Deleted user')               as from_username,
+  coalesce(p.email, '')                              as from_email,
+  p.avatar_url                                       as from_avatar_url,
+  p.initials                                         as from_initials,
   c.url,
   c.screenshot_url,
   c.pin_x,
@@ -114,18 +128,22 @@ select
   c.anchor_selector,
   c.anchor_x,
   c.anchor_y,
+  c.anchor_path,
   c.body,
+  c.tags,
   c.created_at,
   cr.read_at,
-  -- resolved recipient (user)
   case
-    when cr.recipient_type = 'user'  then cr.recipient_id
-    when cr.recipient_type = 'group' then gm.user_id
-  end as for_user_id,
-  cr.resolved_at
+    when cr.recipient_type = 'user'   then cr.recipient_id
+    when cr.recipient_type = 'group'  then gm.user_id
+    when cr.recipient_type = 'public' then auth.uid()
+    else null
+  end                                                as for_user_id,
+  cr.resolved_at,
+  cr.recipient_type
 from comment_recipients cr
-join comments c on c.id = cr.comment_id
-join profiles p on p.id = c.from_user_id
+join  comments      c  on c.id  = cr.comment_id
+left join profiles  p  on p.id  = c.from_user_id
 left join group_members gm
   on cr.recipient_type = 'group' and gm.group_id = cr.recipient_id;
 ```
@@ -344,6 +362,58 @@ create policy "share_links_delete" on share_links
 
 ---
 
+### `contacts`
+
+Contact relationship between two users. Directional request (requester → addressee), pair-unique constraint prevents duplicates in both directions.
+
+```sql
+create table contacts (
+  id            uuid primary key default gen_random_uuid(),
+  requester_id  uuid not null references profiles(id) on delete cascade,
+  addressee_id  uuid not null references profiles(id) on delete cascade,
+  status        text not null default 'pending',
+  created_at    timestamptz default now(),
+
+  constraint contacts_no_self    check (requester_id != addressee_id),
+  constraint contacts_status_chk check (status = any(array['pending','accepted','declined']))
+);
+
+-- Pair-unique: A→B and B→A cannot coexist
+create unique index contacts_unique_pair_idx
+  on contacts (least(requester_id, addressee_id), greatest(requester_id, addressee_id));
+```
+
+RLS: read = both parties; insert = requester_id only; update = addressee_id (to accept/decline); delete = either party.
+
+Also subscribed to Supabase Realtime for live contact request notifications.
+
+**Migration**: `supabase/migrations/20240621000015_contacts.sql`
+
+---
+
+### `screenshot_cleanup_queue`
+
+Deferred cleanup queue for Storage objects. When a comment is deleted, a trigger adds the `screenshot_path` to this table. `cleanup-screenshots` Edge Function drains it on demand.
+
+```sql
+create table screenshot_cleanup_queue (
+  id         uuid primary key default gen_random_uuid(),
+  path       text not null,
+  created_at timestamptz default now()
+);
+
+-- Trigger: on comment delete, enqueue the screenshot path
+create trigger on_comment_deleted
+  before delete on comments
+  for each row execute function queue_screenshot_cleanup();
+```
+
+No public RLS policy — only accessible via service role (Edge Function).
+
+**Migration**: `supabase/migrations/20240621000010_before_replies.sql`
+
+---
+
 ## Realtime
 
 Live notifications use Supabase Realtime on the `comment_recipients` table.
@@ -353,16 +423,28 @@ Live notifications use Supabase Realtime on the `comment_recipients` table.
 alter publication supabase_realtime add table comment_recipients;
 ```
 
-The extension subscribes to the channel:
+The extension subscribes to two channels:
 
 ```js
+// Incoming comments
 supabase
   .channel('inbox')
   .on('postgres_changes', {
     event: 'INSERT',
     schema: 'public',
     table: 'comment_recipients',
-    filter: `recipient_id=eq.${userId}`
+    filter: `recipient_type=eq.user,recipient_id=eq.${userId}`
   }, handleNewComment)
+  .subscribe()
+
+// Contact requests
+supabase
+  .channel('contacts')
+  .on('postgres_changes', {
+    event: 'INSERT',
+    schema: 'public',
+    table: 'contacts',
+    filter: `addressee_id=eq.${userId}`
+  }, handleNewContactRequest)
   .subscribe()
 ```

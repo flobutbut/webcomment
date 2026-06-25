@@ -41,31 +41,47 @@ export function DashboardLayout() {
   const navigate = useNavigate()
 
   useEffect(() => {
+    const hasHashTokens = window.location.hash.includes('access_token=')
+
     supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) {
-        navigate('/', { replace: true })
-      } else {
+      if (data.session) {
         setSession(data.session)
+        setLoading(false)
+      } else if (!hasHashTokens) {
+        navigate('/', { replace: true })
+        setLoading(false)
       }
-      setLoading(false)
+      // else: Supabase is exchanging hash tokens async — wait for onAuthStateChange
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+      if (s) {
+        setSession(s)
+        setLoading(false)
+      }
       if (event === 'SIGNED_OUT') navigate('/', { replace: true })
-      if (s) setSession(s)
+      // Hash exchange failed: INITIAL_SESSION fires with no session
+      if (event === 'INITIAL_SESSION' && !s && hasHashTokens) {
+        navigate('/', { replace: true })
+        setLoading(false)
+      }
     })
 
     return () => subscription.unsubscribe()
   }, [navigate])
 
-  useEffect(() => {
-    if (!session) return
-    supabase
+  async function refreshProfile() {
+    if (!session?.user.id) return
+    const { data } = await supabase
       .from('profiles')
       .select('id, username, email, baseline, avatar_url, initials, created_at')
       .eq('id', session.user.id)
       .single()
-      .then(({ data }) => setProfile(data))
+    setProfile(data)
+  }
+
+  useEffect(() => {
+    refreshProfile()
   }, [session?.user.id])
 
   if (loading) {
@@ -83,6 +99,7 @@ export function DashboardLayout() {
     profile,
     search,
     filterTypes,
+    refreshProfile,
   }
 
   const showBanner = extensionInstalled === false && !bannerDismissed

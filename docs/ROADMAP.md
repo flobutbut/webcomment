@@ -176,7 +176,13 @@ Public mode allows displaying comments visible to all extension users on the sam
 - [ ] Optional share link expiration
 - [ ] Remove debug logs from the `notify-email` function (`toEmails`, `errors`, `hasApiKey` fields)
 - [ ] `MARK_READ` by group: currently one `comment_recipients` row per group → plan one row per member for individual marking
-- [x] Settings: profile editing — `baseline` (shown on contact cards) and avatar `initials` editable from the webapp Settings page; username and avatar photo not yet editable
+- [x] Settings: profile editing — `baseline`, `initials`, and `username` editable from the webapp Settings page; avatar photo not yet editable
+
+---
+
+## Technical debt
+
+- [ ] **`@mention` text in comment bodies not username-change-proof** — `comments.body` stores mentions as literal `@username` text. When a user renames, `from_username` updates automatically (live join in `comment_inbox` view) but `@alice` in existing bodies still shows the old username. Fix: store mentions by `user_id` (e.g. `@{uuid}` in body or a separate `comment_mentions` table) and resolve to current username at render time. Touches `send-comment`, `BodyWithTags` (extension), and the webapp renderer.
 
 ---
 

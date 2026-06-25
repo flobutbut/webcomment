@@ -45,6 +45,10 @@ export function InboxPage() {
         event: 'INSERT', schema: 'public', table: 'comment_recipients',
         filter: `recipient_type=eq.user,recipient_id=eq.${userId}`,
       }, loadComments)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'comment_recipients',
+        filter: `recipient_type=eq.follow,recipient_id=eq.${userId}`,
+      }, loadComments)
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [userId])
@@ -94,6 +98,7 @@ export function InboxPage() {
                   pin_x={comment.pin_x}
                   pin_y={comment.pin_y}
                   body={comment.body}
+                  mentions={comment.mentions}
                   from_username={comment.from_username}
                   from_avatar_url={comment.from_avatar_url}
                   from_initials={comment.from_initials}

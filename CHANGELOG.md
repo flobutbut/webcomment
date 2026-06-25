@@ -9,6 +9,44 @@ Format: `## [version] — YYYY-MM-DD`, most recent first.
 
 ---
 
+## [0.7.0] — 2026-06-25
+
+### Social — Follow
+- Backend — New `follows` table (asymmetric, no acceptance required); RLS: any authenticated user can read, only follower can insert/delete
+- Backend — `send-comment`: when a public comment is posted, creates a `recipient_type='follow'` row in `comment_recipients` for each follower — the comment lands directly in their inbox
+- Backend — New `comment_inbox` view: adds `follow` case to `for_user_id` CASE expression; also adds `anchor_path` column (previously missing) and `mentions` column
+- Extension — Profile overlay: new "Follow" button (visible when `VITE_PUBLIC_MODE_ENABLED=true`, hidden on own profile and when already a contact); status-aware (`following` / `none`); sends `ADD_FOLLOW` to service worker
+- Extension — Service worker: new `ADD_FOLLOW` and `REMOVE_FOLLOW` handlers; `GET_USER_PROFILE` now also returns `followStatus`; Realtime subscription extended to `recipient_type=eq.follow` events (badge + system notification)
+- Extension — Popup Inbox: Realtime channel extended to also listen for `recipient_type=eq.follow` inserts
+- Webapp — Inbox Realtime channel extended to also listen for `recipient_type=eq.follow` inserts
+- Extension — Content script overlays (pin detail, profile): all UI strings translated to English
+
+### Fix — @mentions stored as UUIDs
+- Backend — `send-comment`: replaces `@username` with `@[uuid]` in comment body before storage; caches resolved `[{id, username}]` in new `comments.mentions` jsonb column — mentions now survive username renames
+- Extension — New shared `resolveBody(body, mentions)` utility in `shared/utils.ts`
+- Extension — New shared `BodyText` component in `popup/components/BodyText.tsx` — resolves `@[uuid]` and highlights `#tags` and `@mentions`; replaces the local `BodyWithTags` in `Inbox.tsx`; also used in `Sent.tsx`
+- Extension — Content script `renderTaggedBody`: resolves `@[uuid]` using the mentions map; now also highlights `@mentions` in purple (consistent with `#tags` in blue)
+- Webapp — New shared `BodyText` component in `components/BodyText.tsx`; new `resolveBody` util in `lib/utils.ts`; `CommentDetail`, `InboxPage`, and `MyCommentsPage` updated to resolve and highlight mentions
+
+### Extension
+- Footer: add "Open web app" link below the New Comment button; if the user is logged in, opens the webapp dashboard already authenticated via Supabase session token handoff
+- Fix: `VITE_SHARE_BASE_URL=""` (empty string) now correctly falls back to `https://webcomment.app` — previously `??` did not catch empty strings, causing tokens to be sent to an empty URL
+
+### Webapp — Settings page rework
+- Avatar tile: replaces the static avatar block + separate initials field with an inline editable circle (dashed when empty, blue-tinted when filled, pencil badge on hover) — identical interaction to the signup form
+- Avatar tile preview: shows the baseline instead of the email address, updated live as the user types
+- Add editable username field (validation: 3–30 chars, `[a-zA-Z0-9_-]`) — handles uniqueness conflict error
+- Save / Discard: Save disabled when form is unchanged; Discard resets all fields to stored values and only appears when there are unsaved changes
+- Email change flow: "Edit" link on the Email row reveals an input for the new address + "Send confirmation" button; uses `supabase.auth.updateUser` to trigger a confirmation email — change only takes effect after the user clicks the link; success shows a confirmation banner
+
+### Webapp — Fixes
+- Fix: `DashboardLayout` now handles hash-token SSO correctly — defers the redirect-to-home until Supabase's async hash exchange completes, so "Open web app" from the extension actually authenticates the session
+- Fix: profile is refreshed in context immediately after a successful Settings save — `savedUsername`, the Account section, `isDirty`, and the UserMenu now reflect the new values without a page reload
+- Fix: delete-account modal can no longer be opened before the profile is loaded; `handleDeleteAccount` also guards against a null profile, preventing the `'…'` bypass
+- Fix: username uniqueness error now detected via Postgres error code `23505` instead of a broad `"Database error"` string match that was mis-classifying all DB errors as "username already taken"
+
+---
+
 ## [0.6.0] — 2026-06-25
 
 ### Webapp — Design System

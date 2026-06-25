@@ -2,21 +2,28 @@ import { useEffect, useRef, useState } from 'react'
 import { useOutletContext, useNavigate } from 'react-router-dom'
 import { Check, TriangleAlert } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import { Avatar } from '../../components/Avatar'
 import { Button } from '../../components/Button'
 import { Input } from '../../components/Input'
 import { PageHeader } from '../../components/PageHeader'
 import type { DashboardContext } from '../../lib/types'
 
 export function SettingsPage() {
-  const { userId, profile } = useOutletContext<DashboardContext>()
+  const { userId, profile, refreshProfile } = useOutletContext<DashboardContext>()
   const navigate = useNavigate()
 
+  const [username, setUsername] = useState('')
   const [baseline, setBaseline] = useState('')
   const [initials, setInitials] = useState('')
   const [saving,   setSaving]   = useState(false)
   const [saved,    setSaved]    = useState(false)
   const [error,    setError]    = useState<string | null>(null)
+
+  const [emailEditOpen,  setEmailEditOpen]  = useState(false)
+  const [newEmail,       setNewEmail]       = useState('')
+  const [emailSending,   setEmailSending]   = useState(false)
+  const [emailSent,      setEmailSent]      = useState(false)
+  const [emailError,     setEmailError]     = useState<string | null>(null)
+  const newEmailInputRef = useRef<HTMLInputElement>(null)
 
   const [deleteOpen,    setDeleteOpen]    = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState('')
@@ -26,32 +33,91 @@ export function SettingsPage() {
 
   useEffect(() => {
     if (!profile) return
+    setUsername(profile.username ?? '')
     setBaseline(profile.baseline ?? '')
     setInitials(profile.initials ?? '')
   }, [profile])
 
+  const savedUsername = profile?.username ?? '…'
+
+  const isDirty = username !== (profile?.username ?? '')
+    || baseline !== (profile?.baseline ?? '')
+    || initials !== (profile?.initials ?? '')
+
+  function handleDiscard() {
+    if (!profile) return
+    setUsername(profile.username ?? '')
+    setBaseline(profile.baseline ?? '')
+    setInitials(profile.initials ?? '')
+    setError(null)
+  }
+
+  function validateUsername(u: string): string | null {
+    if (u.length < 3 || u.length > 30) return 'Username must be 3–30 characters.'
+    if (!/^[a-zA-Z0-9_-]+$/.test(u)) return 'Only letters, digits, _ or - allowed.'
+    return null
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
-    setSaving(true)
     setError(null)
+
+    const usernameErr = validateUsername(username)
+    if (usernameErr) { setError(usernameErr); return }
+
+    setSaving(true)
 
     const { error: err } = await supabase
       .from('profiles')
-      .update({ baseline: baseline.trim() || null, initials: initials.trim() || null })
+      .update({
+        username: username.trim(),
+        baseline: baseline.trim() || null,
+        initials: initials.trim() || null,
+      })
       .eq('id', userId)
 
     setSaving(false)
     if (err) {
-      setError('Failed to save. Please try again.')
+      if (err.code === '23505') {
+        setError('This username is already taken.')
+      } else {
+        setError('Failed to save. Please try again.')
+      }
     } else {
+      await refreshProfile()
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
     }
   }
 
-  const username = profile?.username ?? '…'
+  function openEmailEdit() {
+    setNewEmail('')
+    setEmailError(null)
+    setEmailSent(false)
+    setEmailEditOpen(true)
+    setTimeout(() => newEmailInputRef.current?.focus(), 50)
+  }
+
+  async function handleEmailChange(e: React.FormEvent) {
+    e.preventDefault()
+    if (!newEmail || newEmail === profile?.email) return
+    setEmailSending(true)
+    setEmailError(null)
+
+    const { error: err } = await supabase.auth.updateUser({ email: newEmail })
+
+    setEmailSending(false)
+    if (err) {
+      setEmailError(err.message.includes('already registered')
+        ? 'This email is already in use.'
+        : 'Failed to send confirmation. Please try again.')
+    } else {
+      setEmailSent(true)
+    }
+  }
 
   function openDeleteModal() {
+    if (!profile) return
     setDeleteConfirm('')
     setDeleteError(null)
     setDeleteOpen(true)
@@ -59,7 +125,7 @@ export function SettingsPage() {
   }
 
   async function handleDeleteAccount() {
-    if (deleteConfirm !== username) return
+    if (!profile || deleteConfirm !== savedUsername) return
     setDeleting(true)
     setDeleteError(null)
 
@@ -105,18 +171,48 @@ export function SettingsPage() {
 
             <form onSubmit={handleSave} className="space-y-5">
 
-              {/* Avatar + username read-only */}
-              <div className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 bg-gray-50">
-                <Avatar
-                  username={username}
-                  initials={initials || profile?.initials}
-                  avatarUrl={profile?.avatar_url}
-                  size="lg"
-                />
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-900">{username}</p>
-                  <p className="text-xs text-gray-400">{profile?.email}</p>
+              {/* Avatar tile — editable initials inline + username read-only */}
+              <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50">
+                <div className="relative group/avatar flex-shrink-0 cursor-text">
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-150 ${
+                    initials
+                      ? 'bg-blue-600/15 group-hover/avatar:bg-blue-600/20 has-[:focus]:ring-2 has-[:focus]:ring-blue-500/30 has-[:focus]:ring-offset-1 has-[:focus]:ring-offset-gray-50'
+                      : 'border-2 border-dashed border-gray-300 group-hover/avatar:border-gray-400 has-[:focus]:border-blue-500 has-[:focus]:border-solid'
+                  }`}>
+                    <input
+                      type="text"
+                      value={initials}
+                      onChange={e => setInitials(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 2))}
+                      maxLength={2}
+                      placeholder="AB"
+                      className={`w-8 text-center font-bold text-[13px] bg-transparent focus:outline-none cursor-text ${
+                        initials ? 'text-blue-600' : 'text-transparent placeholder:text-gray-300 placeholder:font-normal'
+                      }`}
+                    />
+                  </div>
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-white border border-gray-200 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 group-focus-within/avatar:opacity-0 transition-opacity duration-150 pointer-events-none">
+                    <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
+                  </div>
                 </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-900">{username || savedUsername}</p>
+                  {baseline && <p className="text-xs text-gray-400 truncate">{baseline}</p>}
+                </div>
+              </div>
+
+              {/* Username */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-gray-700">Username</label>
+                <Input
+                  type="text"
+                  value={username}
+                  onChange={e => setUsername(e.target.value.replace(/ /g, '_').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 30))}
+                  placeholder="your_username"
+                  maxLength={30}
+                />
               </div>
 
               {/* Baseline */}
@@ -129,39 +225,27 @@ export function SettingsPage() {
                   placeholder="Designer · Paris · Open to feedback"
                   maxLength={80}
                 />
-                <p className="text-xs text-gray-400 flex justify-between">
-                  <span>Shown on your contact card instead of your email.</span>
-                  <span>{baseline.length}/80</span>
-                </p>
-              </div>
-
-              {/* Initials */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-700">Avatar initials</label>
-                <Input
-                  type="text"
-                  value={initials}
-                  onChange={e => setInitials(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 2))}
-                  placeholder="AB"
-                  maxLength={2}
-                  className="max-w-[80px] text-center font-semibold tracking-wider"
-                />
-                <p className="text-xs text-gray-400">2 characters, shown in your avatar when no photo is set.</p>
+                <p className="text-xs text-gray-400 text-right">{baseline.length}/80</p>
               </div>
 
               {error && (
                 <p className="text-xs text-red-500">{error}</p>
               )}
 
-              <div className="flex items-center gap-3">
-                <Button type="submit" variant="primary" size="md" disabled={saving}>
-                  {saving ? 'Saving…' : 'Save changes'}
-                </Button>
+              <div className="flex items-center justify-end gap-3">
                 {saved && (
-                  <span className="inline-flex items-center gap-1 text-xs text-green-600">
+                  <span className="inline-flex items-center gap-1 text-xs text-green-600 mr-auto">
                     <Check className="w-3.5 h-3.5" /> Saved
                   </span>
                 )}
+                {isDirty && !saving && (
+                  <Button type="button" variant="outline" size="md" onClick={handleDiscard}>
+                    Discard
+                  </Button>
+                )}
+                <Button type="submit" variant="primary" size="md" disabled={saving || !isDirty}>
+                  {saving ? 'Saving…' : 'Save changes'}
+                </Button>
               </div>
             </form>
           </section>
@@ -172,11 +256,67 @@ export function SettingsPage() {
             <div className="rounded-xl border border-gray-200 divide-y divide-gray-200">
               <div className="flex items-center justify-between px-4 py-3">
                 <span className="text-xs text-gray-500">Username</span>
-                <span className="text-xs font-medium text-gray-900">@{username}</span>
+                <span className="text-xs font-medium text-gray-900">@{savedUsername}</span>
               </div>
-              <div className="flex items-center justify-between px-4 py-3">
-                <span className="text-xs text-gray-500">Email</span>
-                <span className="text-xs font-medium text-gray-900">{profile?.email}</span>
+              <div className="px-4 py-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">Email</span>
+                  {!emailEditOpen && (
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-medium text-gray-900">{profile?.email}</span>
+                      <button
+                        type="button"
+                        onClick={openEmailEdit}
+                        className="text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  )}
+                  {emailEditOpen && !emailSent && (
+                    <span className="text-xs text-gray-400">{profile?.email}</span>
+                  )}
+                </div>
+
+                {emailEditOpen && !emailSent && (
+                  <form onSubmit={handleEmailChange} className="space-y-2">
+                    <Input
+                      ref={newEmailInputRef}
+                      type="email"
+                      value={newEmail}
+                      onChange={e => { setNewEmail(e.target.value); setEmailError(null) }}
+                      placeholder="new@email.com"
+                      required
+                    />
+                    {emailError && <p className="text-xs text-red-500">{emailError}</p>}
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEmailEditOpen(false)}
+                        disabled={emailSending}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        variant="primary"
+                        size="sm"
+                        disabled={emailSending || !newEmail || newEmail === profile?.email}
+                      >
+                        {emailSending ? 'Sending…' : 'Send confirmation'}
+                      </Button>
+                    </div>
+                  </form>
+                )}
+
+                {emailSent && (
+                  <div className="flex items-start gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                    <Check className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                    <span>Confirmation sent to <strong>{newEmail}</strong>. Click the link to apply the change.</span>
+                  </div>
+                )}
               </div>
               <div className="flex items-center justify-between px-4 py-3">
                 <span className="text-xs text-gray-500">Member since</span>
@@ -228,14 +368,14 @@ export function SettingsPage() {
 
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-gray-700">
-                Type <span className="font-mono font-bold text-gray-900">{username}</span> to confirm
+                Type <span className="font-mono font-bold text-gray-900">{savedUsername}</span> to confirm
               </label>
               <Input
                 ref={deleteInputRef}
                 type="text"
                 value={deleteConfirm}
                 onChange={e => { setDeleteConfirm(e.target.value); setDeleteError(null) }}
-                placeholder={username}
+                placeholder={savedUsername}
                 autoComplete="off"
               />
               {deleteError && <p className="text-xs text-red-500">{deleteError}</p>}
@@ -256,7 +396,7 @@ export function SettingsPage() {
                 variant="danger"
                 size="sm"
                 onClick={handleDeleteAccount}
-                disabled={deleteConfirm !== username || deleting}
+                disabled={deleteConfirm !== savedUsername || deleting}
               >
                 {deleting ? 'Deleting…' : 'Delete my account'}
               </Button>

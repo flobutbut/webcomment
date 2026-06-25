@@ -159,7 +159,9 @@ async function handleMessage(message: Message): Promise<unknown> {
     case 'UPDATE_BADGE':      return handleUpdateBadge()
     case 'REFRESH_PINS':      return handleRefreshPins(message.payload.visible)
     case 'GET_USER_PROFILE':  return getUserProfile(message.payload.userId)
-    case 'ADD_CONTACT':          return addContact(message.payload.addresseeId)
+    case 'ADD_CONTACT':       return addContact(message.payload.addresseeId)
+    case 'ADD_FOLLOW':        return addFollow(message.payload.followedId)
+    case 'REMOVE_FOLLOW':     return removeFollow(message.payload.followedId)
     case 'NAVIGATE_TO_COMMENT': return navigateToComment(message.payload.commentId, message.payload.url)
     default:                    return { error: 'Unknown message type' }
   }
@@ -308,7 +310,7 @@ async function showPinsForTab(tabId: number, rawUrl: string, targetCommentId?: s
     const [{ data: received }, { data: sent }] = await Promise.all([
       supabase.from('comment_inbox').select('*').eq('for_user_id', userId).in('url', urlSet).is('resolved_at', null),
       supabase.from('comments')
-        .select('id, url, body, screenshot_url, pin_x, pin_y, anchor_selector, anchor_path, anchor_x, anchor_y, tags, created_at')
+        .select('id, url, body, mentions, screenshot_url, pin_x, pin_y, anchor_selector, anchor_path, anchor_x, anchor_y, tags, created_at')
         .eq('from_user_id', userId).in('url', urlSet),
     ])
 
@@ -355,7 +357,7 @@ async function getUserProfile(userId: string): Promise<unknown> {
     const currentUserId = currentSession!.user.id
     const isCurrentUser = userId === currentUserId
 
-    const [commentsResult, contactResult] = await Promise.all([
+    const [commentsResult, contactResult, followResult] = await Promise.all([
       supabase
         .from('comment_inbox')
         .select('comment_id, body, url, created_at')
@@ -370,15 +372,24 @@ async function getUserProfile(userId: string): Promise<unknown> {
           .select('id, status')
           .or(`and(requester_id.eq.${currentUserId},addressee_id.eq.${userId}),and(requester_id.eq.${userId},addressee_id.eq.${currentUserId})`)
           .maybeSingle(),
+      isCurrentUser
+        ? Promise.resolve({ data: null, error: null })
+        : supabase
+          .from('follows')
+          .select('follower_id')
+          .eq('follower_id', currentUserId)
+          .eq('followed_id', userId)
+          .maybeSingle(),
     ])
 
     return {
       comments:      commentsResult.data ?? [],
       contactStatus: (contactResult.data as { status?: string } | null)?.status ?? 'none',
+      followStatus:  followResult.data ? 'following' : 'none',
       isCurrentUser,
     }
   } catch (err) {
-    return { error: (err as Error).message, comments: [], contactStatus: 'none', isCurrentUser: false }
+    return { error: (err as Error).message, comments: [], contactStatus: 'none', followStatus: 'none', isCurrentUser: false }
   }
 }
 
@@ -398,6 +409,34 @@ async function addContact(addresseeId: string): Promise<unknown> {
     const { error } = await supabase
       .from('contacts')
       .insert({ requester_id: currentSession!.user.id, addressee_id: addresseeId, status: 'pending' })
+    if (error) throw error
+    return { success: true }
+  } catch (err) {
+    return { error: (err as Error).message }
+  }
+}
+
+async function addFollow(followedId: string): Promise<unknown> {
+  try {
+    if (!await ensureSession()) throw new Error('Not authenticated')
+    const { error } = await supabase
+      .from('follows')
+      .insert({ follower_id: currentSession!.user.id, followed_id: followedId })
+    if (error) throw error
+    return { success: true }
+  } catch (err) {
+    return { error: (err as Error).message }
+  }
+}
+
+async function removeFollow(followedId: string): Promise<unknown> {
+  try {
+    if (!await ensureSession()) throw new Error('Not authenticated')
+    const { error } = await supabase
+      .from('follows')
+      .delete()
+      .eq('follower_id', currentSession!.user.id)
+      .eq('followed_id', followedId)
     if (error) throw error
     return { success: true }
   } catch (err) {
@@ -551,26 +590,30 @@ async function resolveComment(recipientId: string): Promise<unknown> {
 function subscribeToInbox(userId: string) {
   realtimeChannel?.unsubscribe()
 
+  const handleNewInboxItem = async () => {
+    await updateBadge(userId)
+    chrome.notifications.create({
+      type:    'basic',
+      iconUrl: 'icons/48.png',
+      title:   'WebComment',
+      message: 'You received a new comment',
+    })
+  }
+
   realtimeChannel = supabase
     .channel(`inbox:${userId}`)
-    .on(
-      'postgres_changes',
-      {
-        event:  'INSERT',
-        schema: 'public',
-        table:  'comment_recipients',
-        filter: `recipient_type=eq.user,recipient_id=eq.${userId}`,
-      },
-      async () => {
-        await updateBadge(userId)
-        chrome.notifications.create({
-          type:    'basic',
-          iconUrl: 'icons/48.png',
-          title:   'WebComment',
-          message: 'You received a new comment',
-        })
-      }
-    )
+    .on('postgres_changes', {
+      event:  'INSERT',
+      schema: 'public',
+      table:  'comment_recipients',
+      filter: `recipient_type=eq.user,recipient_id=eq.${userId}`,
+    }, handleNewInboxItem)
+    .on('postgres_changes', {
+      event:  'INSERT',
+      schema: 'public',
+      table:  'comment_recipients',
+      filter: `recipient_type=eq.follow,recipient_id=eq.${userId}`,
+    }, handleNewInboxItem)
     .subscribe((status, err) => {
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
         console.error('[Realtime] channel error:', err ?? status)

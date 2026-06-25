@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { Trash2, ImageOff } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import { hostname, timeAgo } from '../../lib/utils'
+import { hostname, timeAgo, resolveBody } from '../../lib/utils'
 import { Spinner } from '../../components/Spinner'
 import { PageHeader } from '../../components/PageHeader'
 import { EmptyState } from '../../components/EmptyState'
@@ -38,7 +38,7 @@ export function MyCommentsPage() {
   useEffect(() => {
     supabase
       .from('comments')
-      .select('id, url, body, tags, screenshot_url, pin_x, pin_y, created_at')
+      .select('id, url, body, mentions, tags, screenshot_url, pin_x, pin_y, created_at')
       .eq('from_user_id', userId)
       .order('created_at', { ascending: false })
       .then(({ data }) => {
@@ -108,7 +108,7 @@ export function MyCommentsPage() {
                         <span className="text-[11px] text-gray-400 truncate">{hostname(comment.url)}</span>
                         <span className="text-[11px] text-gray-400 flex-shrink-0">{timeAgo(comment.created_at)}</span>
                       </div>
-                      <p className="text-xs text-gray-700 truncate">{comment.body}</p>
+                      <p className="text-xs text-gray-700 truncate">{resolveBody(comment.body, comment.mentions)}</p>
                     </div>
                   </button>
                   <button
@@ -134,6 +134,7 @@ export function MyCommentsPage() {
               pin_x={selected.pin_x}
               pin_y={selected.pin_y}
               body={selected.body}
+              mentions={selected.mentions}
               onOpenPage={() => window.open(selected.url, '_blank')}
               onDelete={async () => {
                 await supabase.from('comments').delete().eq('id', selected.id)

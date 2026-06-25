@@ -5,8 +5,9 @@ import arrowRightIcon from '@iconify-icons/lucide/arrow-right'
 import checkIcon      from '@iconify-icons/lucide/check'
 import link2Icon      from '@iconify-icons/lucide/link-2'
 import imageOffIcon   from '@iconify-icons/lucide/image-off'
-import { Button }  from '../components/Button'
-import { Loading } from '../components/Loading'
+import { Button }   from '../components/Button'
+import { Loading }  from '../components/Loading'
+import { BodyText } from '../components/BodyText'
 import { supabase } from '../../shared/supabase'
 import type { CommentInboxItem } from '../../shared/types'
 import { hostname, timeAgo, commentLinkUrl } from '../../shared/utils'
@@ -30,18 +31,6 @@ function ScreenshotThumbnail({ url, pinX, pinY }: { url: string; pinX: number; p
   )
 }
 
-function BodyWithTags({ body }: { body: string }) {
-  const parts = body.split(/(#[A-Za-z0-9_]+)/g)
-  return (
-    <p className="text-[13px] text-gray-700 leading-relaxed">
-      {parts.map((part, i) =>
-        /^#[A-Za-z0-9_]+$/.test(part)
-          ? <span key={i} className="text-blue-600 font-medium">{part}</span>
-          : part
-      )}
-    </p>
-  )
-}
 
 function Detail({
   comment,
@@ -105,7 +94,7 @@ function Detail({
         <div>
           <p className="text-[13px] font-semibold text-gray-900">{comment.from_username}</p>
           <p className="text-[11px] text-gray-400 mb-2">{new Date(comment.created_at).toLocaleString('en-US')}</p>
-          <BodyWithTags body={comment.body} />
+          <BodyText body={comment.body} mentions={comment.mentions} />
         </div>
         <Button
           variant="secondary"
@@ -165,16 +154,18 @@ export function Inbox({ userId, onRead }: { userId: string; onRead?: () => void 
 
     const channel = supabase
       .channel(`inbox-ui:${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event:  'INSERT',
-          schema: 'public',
-          table:  'comment_recipients',
-          filter: `recipient_type=eq.user,recipient_id=eq.${userId}`,
-        },
-        loadComments,
-      )
+      .on('postgres_changes', {
+        event:  'INSERT',
+        schema: 'public',
+        table:  'comment_recipients',
+        filter: `recipient_type=eq.user,recipient_id=eq.${userId}`,
+      }, loadComments)
+      .on('postgres_changes', {
+        event:  'INSERT',
+        schema: 'public',
+        table:  'comment_recipients',
+        filter: `recipient_type=eq.follow,recipient_id=eq.${userId}`,
+      }, loadComments)
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }

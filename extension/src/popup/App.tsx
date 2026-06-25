@@ -4,6 +4,7 @@ import { Icon } from '@iconify/react'
 import mapPinIcon       from '@iconify-icons/lucide/map-pin'
 import mapPinOffIcon    from '@iconify-icons/lucide/map-pin-off'
 import userIcon         from '@iconify-icons/lucide/user'
+import externalLinkIcon from '@iconify-icons/lucide/external-link'
 import { supabase } from '../shared/supabase'
 import type { Profile } from '../shared/types'
 import { Button }   from './components/Button'
@@ -12,6 +13,8 @@ import { Login }    from './views/Login'
 import { Inbox }    from './views/Inbox'
 import { Sent }     from './views/Sent'
 import { Settings } from './views/Settings'
+
+const WEBAPP_URL = (import.meta.env.VITE_SHARE_BASE_URL as string) || 'https://webcomment.app'
 
 type Tab = 'inbox' | 'sent'
 
@@ -102,6 +105,17 @@ export function App() {
     setPinsVisible(next)
     chrome.storage.local.set({ pinsVisible: next })
     chrome.runtime.sendMessage({ type: 'REFRESH_PINS', payload: { visible: next } })
+  }
+
+  async function openWebApp() {
+    const { data: { session: currentSession } } = await supabase.auth.getSession()
+    let url = WEBAPP_URL
+    if (currentSession) {
+      const hash = `access_token=${currentSession.access_token}&refresh_token=${currentSession.refresh_token}&type=magiclink`
+      url = `${WEBAPP_URL}/dashboard#${hash}`
+    }
+    chrome.tabs.create({ url })
+    window.close()
   }
 
   async function handleNewComment() {
@@ -208,6 +222,13 @@ export function App() {
             New comment
             <span className="ml-1 text-[10px] opacity-50 font-normal">Alt+Shift+N</span>
           </Button>
+          <button
+            onClick={openWebApp}
+            className="flex items-center justify-center gap-1 w-full text-[11px] text-gray-400 hover:text-blue-500 transition-colors duration-150"
+          >
+            <Icon icon={externalLinkIcon} width={10} height={10} />
+            Open web app
+          </button>
         </div>
       )}
 

@@ -17,6 +17,8 @@ export type Message =
   | { type: 'UPDATE_BADGE' }
   | { type: 'GET_USER_PROFILE';      payload: { userId: string } }
   | { type: 'ADD_CONTACT';           payload: { addresseeId: string } }
+  | { type: 'ADD_FOLLOW';            payload: { followedId: string } }
+  | { type: 'REMOVE_FOLLOW';         payload: { followedId: string } }
   | { type: 'NAVIGATE_TO_COMMENT';   payload: { commentId: string; url: string } }
 
 export type RecipientEntry =

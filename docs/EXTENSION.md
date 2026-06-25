@@ -17,24 +17,30 @@ extension/
 ├── tailwind.config.ts
 ├── src/
 │   ├── background/
-│   │   └── service-worker.ts       # main logic, API calls
+│   │   └── service-worker.ts       # main logic: auth, capture, send, realtime, badge
 │   ├── content/
-│   │   ├── content.ts              # entry point injected into pages
-│   │   ├── PinPicker.tsx           # custom cursor to choose the anchor
-│   │   ├── PinOverlay.tsx          # display of received pins
-│   │   └── ErrorInterceptor.tsx    # replacement for error pages
+│   │   └── content.ts              # all content-script logic: pin picker, composer overlay,
+│   │                               #   live pins, error screen, profile overlay — vanilla TS, no React
 │   ├── popup/
 │   │   ├── index.html
 │   │   ├── main.tsx
-│   │   └── App.tsx
+│   │   ├── index.css               # popup fixed dimensions (360×560px)
+│   │   ├── App.tsx                 # root: auth state, header, tabs, footer
+│   │   ├── components/
+│   │   │   ├── Avatar.tsx
+│   │   │   ├── Button.tsx
+│   │   │   ├── Loading.tsx
+│   │   │   └── Tabs.tsx
 │   │   └── views/
 │   │       ├── Inbox.tsx
-│   │       ├── Composer.tsx
+│   │       ├── Sent.tsx
+│   │       ├── Login.tsx
 │   │       └── Settings.tsx
 │   └── shared/
 │       ├── supabase.ts             # singleton Supabase client
 │       ├── types.ts                # shared TypeScript types
-│       └── messages.ts             # chrome.runtime message types
+│       ├── messages.ts             # chrome.runtime message types
+│       └── utils.ts                # shared helpers (e.g. escapeHtml)
 └── public/
     └── icons/
         ├── 16.png
@@ -42,20 +48,31 @@ extension/
         └── 128.png
 ```
 
+> The content script is entirely in a single `content.ts` file (vanilla TypeScript, no React) — all components (pin picker, composer, overlay panels) are created via DOM APIs and isolated in Shadow DOM.
+
 ## manifest.json
 
 ```json
 {
   "manifest_version": 3,
   "name": "WebComment",
-  "version": "0.1.0",
+  "version": "0.6.0",
   "description": "Private anchored comments on any web page.",
+
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "webcomment@webcomment.app",
+      "strict_min_version": "109.0"
+    }
+  },
 
   "permissions": [
     "activeTab",
+    "scripting",
     "storage",
     "tabs",
-    "notifications"
+    "notifications",
+    "webNavigation"
   ],
 
   "host_permissions": [
@@ -75,22 +92,34 @@ extension/
     }
   ],
 
+  "commands": {
+    "activate-pin-picker": {
+      "suggested_key": { "default": "Alt+Shift+N" },
+      "description": "Activate comment mode on this page"
+    }
+  },
+
   "action": {
     "default_popup": "src/popup/index.html",
     "default_icon": {
-      "16": "icons/16.png",
-      "48": "icons/48.png",
+      "16":  "icons/16.png",
+      "48":  "icons/48.png",
       "128": "icons/128.png"
     }
   },
 
   "icons": {
-    "16": "icons/16.png",
-    "48": "icons/48.png",
+    "16":  "icons/16.png",
+    "48":  "icons/48.png",
     "128": "icons/128.png"
   }
 }
 ```
+
+Key permissions:
+- `scripting` — re-inject content script on already-open pages
+- `webNavigation` — detect navigation errors for the error-intercept screen
+- `commands` — keyboard shortcut `Alt+Shift+N` to activate pin picker without opening the popup
 
 ## Service Worker
 
@@ -288,13 +317,30 @@ If the page is inaccessible and a comment exists for this URL, the content scrip
 
 ## Popup UI
 
+### Layout
+
+```
+┌─────────────────────────────────┐
+│ WebComment  [Pins] [👤●]        │  ← header: Pins toggle + user icon (red badge = pending contacts)
+├─────────────────────────────────┤
+│ [  Inbox  ] [My comments ]      │  ← tabs (hidden in settings mode)
+├─────────────────────────────────┤
+│                                 │
+│   Active view                   │
+│                                 │
+├─────────────────────────────────┤
+│  [+ New comment  Alt+Shift+N]   │  ← footer
+│  [↗ Open web app]               │
+└─────────────────────────────────┘
+```
+
 ### Inbox
 
 ```
 ┌─────────────────────────────────┐
-│ WebComment          [⚙] [2]     │
+│ WebComment  [Pins] [👤]         │
 ├─────────────────────────────────┤
-│ Inbox    New                    │
+│ Inbox    My comments            │
 ├─────────────────────────────────┤
 │ ● Alice Martin                  │
 │   example.com/dashboard         │

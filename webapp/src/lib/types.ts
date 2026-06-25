@@ -10,6 +10,11 @@ export interface Profile {
   created_at: string
 }
 
+export interface Mention {
+  id:       string
+  username: string
+}
+
 export interface CommentInboxItem {
   recipient_id:    string
   comment_id:      string
@@ -22,18 +27,20 @@ export interface CommentInboxItem {
   pin_x:           number
   pin_y:           number
   body:            string
+  mentions:        Mention[]
   tags:            string[] | null
   created_at:      string
   read_at:         string | null
   for_user_id:     string
   resolved_at:     string | null
-  recipient_type:  'user' | 'group' | 'email' | 'public'
+  recipient_type:  'user' | 'group' | 'email' | 'public' | 'follow'
 }
 
 export interface SentComment {
   id:             string
   url:            string
   body:           string
+  mentions:       Mention[]
   tags:           string[] | null
   screenshot_url: string
   pin_x:          number
@@ -58,8 +65,9 @@ export interface Contact {
 }
 
 export interface DashboardContext {
-  userId:      string
-  profile:     Profile | null
-  search:      string
-  filterTypes: Set<FilterType>
+  userId:         string
+  profile:        Profile | null
+  search:         string
+  filterTypes:    Set<FilterType>
+  refreshProfile: () => Promise<void>
 }
