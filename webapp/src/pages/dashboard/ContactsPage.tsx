@@ -41,7 +41,7 @@ function ContactDetail({ contact, currentUserId, onAccept, onDecline, onRemove }
     <div className="h-full overflow-y-auto">
 
       {/* Horizontal banner */}
-      <div className="flex items-center gap-4 px-6 py-4 border-b border-gray-200">
+      <div className="flex items-center gap-4 px-6 py-4 border-b border-gray-200 dark:border-dark-border">
         <Avatar
           username={other.username}
           initials={other.initials}
@@ -49,8 +49,8 @@ function ContactDetail({ contact, currentUserId, onAccept, onDecline, onRemove }
           size="lg"
         />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-900 truncate">{other.username}</p>
-          {other.baseline && <p className="text-xs text-gray-400 truncate">{other.baseline}</p>}
+          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{other.username}</p>
+          {other.baseline && <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{other.baseline}</p>}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {contact.status === 'pending' && isAddressee && (
@@ -60,7 +60,7 @@ function ContactDetail({ contact, currentUserId, onAccept, onDecline, onRemove }
             </>
           )}
           {contact.status === 'pending' && !isAddressee && (
-            <span className="text-xs text-gray-400">Request sent</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500">Request sent</span>
           )}
           {contact.status === 'accepted' && (
             <Button variant="danger-outline" size="sm" onClick={() => onRemove(contact.id)}>Remove</Button>
@@ -76,7 +76,7 @@ function ContactDetail({ contact, currentUserId, onAccept, onDecline, onRemove }
       ) : (
         <div>
           {comments.map((c, i) => (
-            <div key={c.id} className={i > 0 ? 'border-t border-gray-200' : ''}>
+            <div key={c.id} className={i > 0 ? 'border-t border-gray-200 dark:border-dark-border' : ''}>
               <CommentDetail
                 url={c.url}
                 created_at={c.created_at}
@@ -109,7 +109,7 @@ function ContactListItem({ contact, currentUserId, selected, onClick }: {
     <button
       onClick={onClick}
       className={`w-full flex items-center gap-3 px-4 py-3 transition-colors ${
-        selected ? 'bg-blue-50' : 'hover:bg-gray-50'
+        selected ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-dark-hover'
       }`}
     >
       <Avatar
@@ -119,8 +119,8 @@ function ContactListItem({ contact, currentUserId, selected, onClick }: {
         size="md"
       />
       <div className="min-w-0 flex-1 text-left">
-        <p className="text-sm font-medium text-gray-900 truncate">{other.username}</p>
-        {other.baseline && <p className="text-xs text-gray-400 truncate">{other.baseline}</p>}
+        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{other.username}</p>
+        {other.baseline && <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{other.baseline}</p>}
       </div>
       {contact.status === 'pending' && isAddressee && (
         <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
@@ -221,7 +221,7 @@ export function ContactsPage() {
     return other.username.toLowerCase().includes(q) || (other.baseline ?? '').toLowerCase().includes(q)
   }
 
-  const SECTION_LABEL = 'px-4 pt-4 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider'
+  const SECTION_LABEL = 'px-4 pt-4 pb-1 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider'
 
   return (
     <div className="flex flex-col h-full">
@@ -236,7 +236,7 @@ export function ContactsPage() {
 
       {/* Add contact form */}
       {addOpen && (
-        <div className="px-5 py-3 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+        <div className="px-5 py-3 border-b border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-700 flex-shrink-0">
           <form onSubmit={handleAddContact} className="flex gap-2 items-start">
             <div className="flex-1 space-y-1.5">
               <Input
@@ -267,7 +267,7 @@ export function ContactsPage() {
       <div className="flex flex-1 overflow-hidden">
 
         {/* List */}
-        <div className="w-80 flex-shrink-0 border-r border-gray-200 overflow-y-auto">
+        <div className="w-80 flex-shrink-0 border-r border-gray-200 dark:border-dark-border overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-20"><Spinner /></div>
           ) : contacts.length === 0 ? (
@@ -277,7 +277,7 @@ export function ContactsPage() {
               {pendingIn.filter(filterContact).length > 0 && (
                 <div>
                   <p className={SECTION_LABEL}>Requests received</p>
-                  <div className="divide-y divide-gray-200">
+                  <div className="divide-y divide-gray-200 dark:divide-dark-border">
                     {pendingIn.filter(filterContact).map(c => (
                       <ContactListItem key={c.id} contact={c} currentUserId={userId}
                         selected={selected?.id === c.id} onClick={() => setSelected(c)} />
@@ -288,7 +288,7 @@ export function ContactsPage() {
               {accepted.filter(filterContact).length > 0 && (
                 <div>
                   <p className={SECTION_LABEL}>My contacts</p>
-                  <div className="divide-y divide-gray-200">
+                  <div className="divide-y divide-gray-200 dark:divide-dark-border">
                     {accepted.filter(filterContact).map(c => (
                       <ContactListItem key={c.id} contact={c} currentUserId={userId}
                         selected={selected?.id === c.id} onClick={() => setSelected(c)} />
@@ -299,7 +299,7 @@ export function ContactsPage() {
               {pendingOut.filter(filterContact).length > 0 && (
                 <div>
                   <p className={SECTION_LABEL}>Sent requests</p>
-                  <div className="divide-y divide-gray-200">
+                  <div className="divide-y divide-gray-200 dark:divide-dark-border">
                     {pendingOut.filter(filterContact).map(c => (
                       <ContactListItem key={c.id} contact={c} currentUserId={userId}
                         selected={selected?.id === c.id} onClick={() => setSelected(c)} />
