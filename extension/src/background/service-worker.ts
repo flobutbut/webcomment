@@ -189,7 +189,7 @@ async function prepareCapture(pin: { x: number; y: number }): Promise<unknown> {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
     if (!tab?.id || !tab.url) throw new Error('Tab not found')
 
-    const dataUrl  = await chrome.tabs.captureVisibleTab({ format: 'png' })
+    const dataUrl  = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' })
     const webpBlob = await convertToWebP(dataUrl)
 
     const commentId = crypto.randomUUID()

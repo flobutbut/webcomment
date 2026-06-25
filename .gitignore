@@ -24,3 +24,8 @@ npm-debug.log*
 
 # Claude memory (local only)
 .claude/
+
+# Release artifacts
+*.crx
+*.pem
+*.zip

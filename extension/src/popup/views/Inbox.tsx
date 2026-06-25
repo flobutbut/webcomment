@@ -10,7 +10,15 @@ import { Loading }  from '../components/Loading'
 import { BodyText } from '../components/BodyText'
 import { supabase } from '../../shared/supabase'
 import type { CommentInboxItem } from '../../shared/types'
-import { hostname, timeAgo, commentLinkUrl } from '../../shared/utils'
+import { hostname, timeAgo, commentLinkUrl, resolveBody } from '../../shared/utils'
+
+type InboxFilter = 'all' | 'mentions' | 'followed'
+
+const FILTER_TABS = [
+  { value: 'all'      as InboxFilter, label: 'All'      },
+  { value: 'mentions' as InboxFilter, label: 'Mentions'  },
+  { value: 'followed' as InboxFilter, label: 'Followed'  },
+]
 
 function ScreenshotThumbnail({ url, pinX, pinY }: { url: string; pinX: number; pinY: number }) {
   const [err, setErr] = useState(false)
@@ -133,6 +141,7 @@ export function Inbox({ userId, onRead }: { userId: string; onRead?: () => void 
   const [comments, setComments] = useState<CommentInboxItem[]>([])
   const [selected, setSelected] = useState<CommentInboxItem | null>(null)
   const [loading,  setLoading]  = useState(true)
+  const [filter,   setFilter]   = useState<InboxFilter>('all')
 
   function loadComments() {
     supabase
@@ -196,41 +205,66 @@ export function Inbox({ userId, onRead }: { userId: string; onRead?: () => void 
     />
   )
 
-  if (loading) return <Loading />
+  const filtered = filter === 'all'      ? comments
+    : filter === 'mentions' ? comments.filter(c => c.mentions?.some(m => m.id === userId))
+    :                         comments.filter(c => c.recipient_type === 'follow')
 
-  if (comments.length === 0) {
-    return (
-      <div className="p-6 text-center mt-8">
-        <p className="text-[13px] text-gray-400">No comments received.</p>
-        <p className="text-[12px] text-gray-300 mt-1">Click "New" to send one.</p>
-      </div>
-    )
-  }
+  const emptyMessage = filter === 'mentions' ? 'No direct comments received.'
+    : filter === 'followed' ? 'No activity on followed pages.'
+    : 'No comments received.'
 
   return (
-    <div className="divide-y divide-gray-100">
-      {comments.map(comment => (
-        <button
-          key={comment.recipient_id}
-          onClick={() => handleSelect(comment)}
-          className="w-full text-left px-4 py-3 hover:bg-gray-50 flex gap-3 transition-colors duration-100"
-        >
-          <ScreenshotThumbnail url={comment.screenshot_url} pinX={comment.pin_x} pinY={comment.pin_y} />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-1 mb-0.5">
-              <div className="flex items-center gap-1.5 min-w-0">
-                {!comment.read_at && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
-                )}
-                <span className="text-[13px] font-semibold text-gray-900 truncate">{comment.from_username}</span>
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-center px-4 py-2 border-b border-gray-100 flex-shrink-0">
+        <div className="inline-flex bg-gray-100 rounded-lg p-0.5">
+          {FILTER_TABS.map(t => (
+            <button
+              key={t.value}
+              onClick={() => setFilter(t.value)}
+              className={`px-3 py-1 rounded-md text-[11px] font-medium transition-all duration-150 ${
+                filter === t.value
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {loading ? (
+        <Loading />
+      ) : filtered.length === 0 ? (
+        <div className="p-6 text-center mt-8">
+          <p className="text-[13px] text-gray-400">{emptyMessage}</p>
+          {filter === 'all' && <p className="text-[12px] text-gray-300 mt-1">Click "New" to send one.</p>}
+        </div>
+      ) : (
+        <div className="divide-y divide-gray-100 overflow-y-auto flex-1">
+          {filtered.map(comment => (
+            <button
+              key={comment.recipient_id}
+              onClick={() => handleSelect(comment)}
+              className="w-full text-left px-4 py-3 hover:bg-gray-50 flex gap-3 transition-colors duration-100"
+            >
+              <ScreenshotThumbnail url={comment.screenshot_url} pinX={comment.pin_x} pinY={comment.pin_y} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-1 mb-0.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    {!comment.read_at && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
+                    )}
+                    <span className="text-[13px] font-semibold text-gray-900 truncate">{comment.from_username}</span>
+                  </div>
+                  <span className="text-[11px] text-gray-400 flex-shrink-0">{timeAgo(comment.created_at)}</span>
+                </div>
+                <p className="text-[11px] text-gray-500 truncate mb-0.5">{hostname(comment.url)}</p>
+                <p className="text-[12px] text-gray-600 truncate">{resolveBody(comment.body, comment.mentions)}</p>
               </div>
-              <span className="text-[11px] text-gray-400 flex-shrink-0">{timeAgo(comment.created_at)}</span>
-            </div>
-            <p className="text-[11px] text-gray-500 truncate mb-0.5">{hostname(comment.url)}</p>
-            <p className="text-[12px] text-gray-600 truncate">{comment.body}</p>
-          </div>
-        </button>
-      ))}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

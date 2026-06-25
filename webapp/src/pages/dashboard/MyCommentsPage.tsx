@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { Trash2, ImageOff } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import { hostname, timeAgo, resolveBody } from '../../lib/utils'
+import { hostname, timeAgo, resolveBody, matchesSearch } from '../../lib/utils'
+import { useSentComments } from '../../lib/useSentComments'
 import { Spinner } from '../../components/Spinner'
 import { PageHeader } from '../../components/PageHeader'
 import { EmptyState } from '../../components/EmptyState'
 import { CommentDetail } from './CommentDetail'
-import type { SentComment, DashboardContext } from '../../lib/types'
+import type { SentComment, DashboardContext, FilterType } from '../../lib/types'
 
 function ScreenshotThumb({ url, pinX, pinY }: { url: string; pinX: number; pinY: number }) {
   const [err, setErr] = useState(false)
@@ -30,25 +31,12 @@ function ScreenshotThumb({ url, pinX, pinY }: { url: string; pinX: number; pinY:
 
 export function MyCommentsPage() {
   const { userId, search, filterTypes } = useOutletContext<DashboardContext>()
-  const [comments,   setComments]   = useState<SentComment[]>([])
+  const { comments, loading, removeComment } = useSentComments(userId)
   const [selected,   setSelected]   = useState<SentComment | null>(null)
-  const [loading,    setLoading]    = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  useEffect(() => {
-    supabase
-      .from('comments')
-      .select('id, url, body, mentions, tags, screenshot_url, pin_x, pin_y, created_at')
-      .eq('from_user_id', userId)
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        setComments(data ?? [])
-        setLoading(false)
-      })
-  }, [userId])
-
   function handleDeleted(id: string) {
-    setComments(prev => prev.filter(c => c.id !== id))
+    removeComment(id)
     if (selected?.id === id) setSelected(null)
   }
 
@@ -62,13 +50,11 @@ export function MyCommentsPage() {
 
   const filtered = comments.filter(c => {
     if (!search) return true
-    const q = search.toLowerCase()
+    const q      = search.toLowerCase()
     const active = filterTypes.size === 0
-      ? new Set(['url', 'tag'] as const)
+      ? new Set<FilterType>(['url', 'tag'])
       : filterTypes
-    if (active.has('url') && c.url.toLowerCase().includes(q))                        return true
-    if (active.has('tag') && (c.tags ?? []).some(t => t.toLowerCase().includes(q))) return true
-    return false
+    return matchesSearch(q, active, { url: c.url, tags: c.tags })
   })
 
   return (

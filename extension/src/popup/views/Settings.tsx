@@ -4,7 +4,7 @@ import { Loading } from '../components/Loading'
 import { Tabs }    from '../components/Tabs'
 import { Avatar }  from '../components/Avatar'
 import { supabase } from '../../shared/supabase'
-import type { Profile, Contact, ContactProfile } from '../../shared/types'
+import type { Profile, Contact } from '../../shared/types'
 
 type ProfileTab = 'profile' | 'contacts'
 
@@ -33,7 +33,7 @@ function ContactRow({
     <div className="flex items-center gap-3 py-2.5 px-3 rounded-lg hover:bg-gray-50">
       <Avatar
         username={other.username}
-        initials={(other as ContactProfile).initials}
+        initials={other.initials}
         avatarUrl={other.avatar_url}
         className="w-8 h-8 text-[12px]"
       />

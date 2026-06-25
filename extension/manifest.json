@@ -1,13 +1,13 @@
 {
   "manifest_version": 3,
   "name": "WebComment",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Private anchored comments on any web page.",
 
   "browser_specific_settings": {
     "gecko": {
       "id": "webcomment@webcomment.app",
-      "strict_min_version": "109.0"
+      "strict_min_version": "112.0"
     }
   },
 

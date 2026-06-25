@@ -6,7 +6,7 @@ import { Avatar } from '../../components/Avatar'
 import { Spinner } from '../../components/Spinner'
 import { EmptyState } from '../../components/EmptyState'
 import { CommentDetail } from './CommentDetail'
-import type { CommentInboxItem, SentComment, Contact, ContactProfile, FilterType } from '../../lib/types'
+import type { CommentInboxItem, SentComment, Contact, FilterType } from '../../lib/types'
 
 type Selected =
   | { kind: 'inbox';   item: CommentInboxItem }
@@ -48,7 +48,7 @@ function ContactCard({ contact, userId }: { contact: Contact; userId: string }) 
       <div className="flex items-center gap-4 mb-6">
         <Avatar
           username={other.username}
-          initials={(other as ContactProfile).initials}
+          initials={other.initials}
           avatarUrl={other.avatar_url}
           size="lg"
         />
@@ -90,7 +90,7 @@ export function SearchResultsPage({ userId, search, filterTypes }: {
         .order('created_at', { ascending: false }),
       supabase
         .from('comments')
-        .select('id, url, body, tags, screenshot_url, pin_x, pin_y, created_at')
+        .select('id, url, body, mentions, tags, screenshot_url, pin_x, pin_y, created_at')
         .eq('from_user_id', userId)
         .order('created_at', { ascending: false }),
       supabase
@@ -228,7 +228,7 @@ export function SearchResultsPage({ userId, search, filterTypes }: {
                         <button key={c.id} onClick={() => setSelected(sel)} className={ROW(isSelected(sel))}>
                           <Avatar
                             username={other.username}
-                            initials={(other as ContactProfile).initials}
+                            initials={other.initials}
                             avatarUrl={other.avatar_url}
                             size="sm"
                           />

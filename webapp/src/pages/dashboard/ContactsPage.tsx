@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { UserPlus } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { useContacts } from '../../lib/useContacts'
 import { Spinner } from '../../components/Spinner'
 import { Avatar } from '../../components/Avatar'
 import { EmptyState } from '../../components/EmptyState'
@@ -9,7 +10,7 @@ import { PageHeader } from '../../components/PageHeader'
 import { Button } from '../../components/Button'
 import { Input } from '../../components/Input'
 import { CommentDetail } from './CommentDetail'
-import type { Contact, ContactProfile, SentComment, DashboardContext } from '../../lib/types'
+import type { Contact, SentComment, DashboardContext } from '../../lib/types'
 
 function ContactDetail({ contact, currentUserId, onAccept, onDecline, onRemove }: {
   contact:       Contact
@@ -43,7 +44,7 @@ function ContactDetail({ contact, currentUserId, onAccept, onDecline, onRemove }
       <div className="flex items-center gap-4 px-6 py-4 border-b border-gray-200">
         <Avatar
           username={other.username}
-          initials={(other as ContactProfile).initials}
+          initials={other.initials}
           avatarUrl={other.avatar_url}
           size="lg"
         />
@@ -85,7 +86,7 @@ function ContactDetail({ contact, currentUserId, onAccept, onDecline, onRemove }
                 body={c.body}
                 from_username={other.username}
                 from_avatar_url={other.avatar_url}
-                from_initials={(other as ContactProfile).initials}
+                from_initials={other.initials}
                 onOpenPage={() => window.open(c.url, '_blank')}
               />
             </div>
@@ -113,7 +114,7 @@ function ContactListItem({ contact, currentUserId, selected, onClick }: {
     >
       <Avatar
         username={other.username}
-        initials={(other as ContactProfile).initials}
+        initials={other.initials}
         avatarUrl={other.avatar_url}
         size="md"
       />
@@ -130,52 +131,31 @@ function ContactListItem({ contact, currentUserId, selected, onClick }: {
 
 export function ContactsPage() {
   const { userId, profile, search } = useOutletContext<DashboardContext>()
-  const [contacts,  setContacts]  = useState<Contact[]>([])
+  const { contacts, loading, refetch, acceptContact, declineContact, removeContact } = useContacts()
   const [selected,  setSelected]  = useState<Contact | null>(null)
-  const [loading,   setLoading]   = useState(true)
   const [addOpen,   setAddOpen]   = useState(false)
   const [query,     setQuery]     = useState('')
   const [addStatus, setAddStatus] = useState<{ type: 'success' | 'error' | 'info'; msg: string } | null>(null)
   const [adding,    setAdding]    = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => { fetchContacts() }, [userId])
-
   useEffect(() => {
     if (addOpen) setTimeout(() => inputRef.current?.focus(), 50)
     else { setQuery(''); setAddStatus(null) }
   }, [addOpen])
 
-  async function fetchContacts() {
-    setLoading(true)
-    const { data } = await supabase
-      .from('contacts')
-      .select(`
-        id, status, created_at,
-        requester:profiles!contacts_requester_id_fkey(id, username, baseline, avatar_url, initials),
-        addressee:profiles!contacts_addressee_id_fkey(id, username, baseline, avatar_url, initials)
-      `)
-      .in('status', ['pending', 'accepted'])
-      .order('created_at', { ascending: false })
-    setContacts((data as unknown as Contact[]) ?? [])
-    setLoading(false)
-  }
-
   async function handleAccept(id: string) {
-    await supabase.from('contacts').update({ status: 'accepted' }).eq('id', id)
-    setContacts(cs => cs.map(c => c.id === id ? { ...c, status: 'accepted' } : c))
+    await acceptContact(id)
     setSelected(prev => prev?.id === id ? { ...prev, status: 'accepted' } : prev)
   }
 
   async function handleDecline(id: string) {
-    await supabase.from('contacts').update({ status: 'declined' }).eq('id', id)
-    setContacts(cs => cs.filter(c => c.id !== id))
+    await declineContact(id)
     setSelected(prev => prev?.id === id ? null : prev)
   }
 
   async function handleRemove(id: string) {
-    await supabase.from('contacts').delete().eq('id', id)
-    setContacts(cs => cs.filter(c => c.id !== id))
+    await removeContact(id)
     setSelected(prev => prev?.id === id ? null : prev)
   }
 
@@ -225,7 +205,7 @@ export function ContactsPage() {
     } else {
       setAddStatus({ type: 'success', msg: `Request sent to @${found.username}!` })
       setQuery('')
-      fetchContacts()
+      refetch()
     }
     setAdding(false)
   }

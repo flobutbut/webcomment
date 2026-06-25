@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 import { Inbox, MessageSquare, Users, UsersRound, Rss, Sparkles, Settings, Download, X } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
@@ -30,14 +30,14 @@ export function DashboardLayout() {
     setBannerDismissed(true)
   }
 
-  function toggleFilter(f: FilterType) {
+  const toggleFilter = useCallback((f: FilterType) => {
     setFilterTypes(prev => {
       const next = new Set(prev)
       if (next.has(f)) next.delete(f)
       else next.add(f)
       return next
     })
-  }
+  }, [])
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -146,13 +146,13 @@ export function DashboardLayout() {
 
         <nav className="flex-1 overflow-y-auto p-3 space-y-0.5 bg-white">
           <NavItem to="/dashboard/inbox"       icon={<Inbox         className="w-4 h-4" />} label="Inbox"       />
+          <NavItem to="/dashboard/feed"        icon={<Rss           className="w-4 h-4" />} label="Feed"        />
           <NavItem to="/dashboard/my-comments" icon={<MessageSquare className="w-4 h-4" />} label="My Comments" />
           <NavItem to="/dashboard/contacts"    icon={<Users         className="w-4 h-4" />} label="Contacts"    />
 
           <div className="my-2 border-t border-gray-200" />
 
           <NavItem to="/dashboard/groups" icon={<UsersRound className="w-4 h-4" />} label="Groups" comingSoon />
-          <NavItem to="/dashboard/feed"   icon={<Rss        className="w-4 h-4" />} label="Feed"   comingSoon />
         </nav>
 
         <div className="p-3 border-t border-gray-200 space-y-0.5 bg-white flex-shrink-0">

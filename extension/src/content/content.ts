@@ -1402,7 +1402,7 @@ function showToast(msg: string, withCheck = false) {
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
 function renderTaggedBody(text: string, mentions: { id: string; username: string }[] = []): string {

@@ -4,6 +4,7 @@ import { DashboardLayout } from './pages/dashboard/DashboardLayout'
 import { InboxPage } from './pages/dashboard/InboxPage'
 import { MyCommentsPage } from './pages/dashboard/MyCommentsPage'
 import { ContactsPage } from './pages/dashboard/ContactsPage'
+import { FollowedUrlsPage } from './pages/dashboard/FollowedUrlsPage'
 import { SettingsPage } from './pages/dashboard/SettingsPage'
 
 export default function App() {
@@ -15,9 +16,11 @@ export default function App() {
           <Route index element={<Navigate to="inbox" replace />} />
           <Route path="inbox"       element={<InboxPage />} />
           <Route path="my-comments" element={<MyCommentsPage />} />
-          <Route path="contacts"    element={<ContactsPage />} />
-          <Route path="settings"    element={<SettingsPage />} />
+          <Route path="contacts"      element={<ContactsPage />} />
+          <Route path="feed"          element={<FollowedUrlsPage />} />
+          <Route path="settings"      element={<SettingsPage />} />
         </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   )

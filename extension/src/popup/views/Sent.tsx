@@ -155,7 +155,7 @@ export function Sent({ userId, onCommentDeleted }: { userId: string; onCommentDe
   useEffect(() => {
     supabase
       .from('comments')
-      .select('id, url, body, mentions, screenshot_url, pin_x, pin_y, created_at')
+      .select('id, url, body, mentions, tags, screenshot_url, pin_x, pin_y, created_at')
       .eq('from_user_id', userId)
       .order('created_at', { ascending: false })
       .then(({ data }) => {

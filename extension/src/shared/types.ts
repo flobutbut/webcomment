@@ -2,6 +2,7 @@ export interface Profile {
   id:         string
   username:   string
   email:      string
+  baseline:   string | null
   avatar_url: string | null
   initials:   string | null
   created_at: string
@@ -24,6 +25,7 @@ export interface CommentInboxItem {
   anchor_y:        number | null
   body:            string
   mentions:        Mention[]
+  tags:            string[] | null
   created_at:      string
   read_at:         string | null
   for_user_id:     string
@@ -49,6 +51,7 @@ export interface SentComment {
   url:            string
   body:           string
   mentions:       Mention[]
+  tags:           string[] | null
   screenshot_url: string
   pin_x:          number
   pin_y:          number

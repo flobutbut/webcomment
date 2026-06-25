@@ -12,15 +12,17 @@ import { Tabs }     from './components/Tabs'
 import { Login }    from './views/Login'
 import { Inbox }    from './views/Inbox'
 import { Sent }     from './views/Sent'
+import { Feed }     from './views/Feed'
 import { Settings } from './views/Settings'
 
 const WEBAPP_URL = (import.meta.env.VITE_SHARE_BASE_URL as string) || 'https://webcomment.app'
 
-type Tab = 'inbox' | 'sent'
+type Tab = 'inbox' | 'sent' | 'feed'
 
 const MAIN_TABS = [
-  { value: 'inbox' as Tab, label: 'Inbox'        },
-  { value: 'sent'  as Tab, label: 'My comments'  },
+  { value: 'inbox' as Tab, label: 'Inbox'       },
+  { value: 'sent'  as Tab, label: 'My comments' },
+  { value: 'feed'  as Tab, label: 'Feed'        },
 ]
 
 export function App() {
@@ -205,7 +207,9 @@ export function App() {
             />
           : tab === 'inbox'
             ? <Inbox userId={session.user.id} onRead={() => chrome.runtime.sendMessage({ type: 'UPDATE_BADGE' })} />
-            : <Sent  userId={session.user.id} />
+            : tab === 'sent'
+              ? <Sent userId={session.user.id} />
+              : <Feed userId={session.user.id} />
         }
       </div>
 

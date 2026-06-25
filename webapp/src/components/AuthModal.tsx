@@ -19,6 +19,7 @@ function translateError(msg: string): string {
   if (msg.includes('Email not confirmed'))         return 'Please confirm your email address first.'
   if (msg.includes('User already registered'))     return 'An account with this email already exists.'
   if (msg.includes('Password should be'))          return 'Password must be at least 6 characters.'
+  if (msg.includes('rate limit'))                  return 'Too many attempts, please try again in a few minutes.'
   if (msg.includes('profiles_username_key'))       return 'This username is already taken.'
   if (msg.includes('Database error'))              return 'This username is already taken.'
   return msg

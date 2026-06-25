@@ -9,6 +9,35 @@ Format: `## [version] — YYYY-MM-DD`, most recent first.
 
 ---
 
+## [0.8.0] — 2026-06-25
+
+### Feed — Follow URLs
+- Extension / Webapp — New **Feed** feature: users can follow any URL and see its public comments in a dedicated feed, separate from the inbox
+- Extension — New "Feed" tab (3rd tab, alongside Inbox / My comments); top bar shows the current page hostname with a **Follow / Unfollow** toggle; feed lists the 50 most recent public comments across all followed URLs, newest first; each item opens a detail view with screenshot and pin
+- Webapp — New **Feed** page in the dashboard sidebar (was placeholder "Coming Soon"); two-column layout: left column lists followed URLs with favicon, hostname, full URL, and a hover-to-reveal unfollow button; right column shows public comments for the selected URL with author avatar, body, tags, and screenshot thumbnail
+- Backend — New `url_follows` table (user_id, url) with RLS (users manage only their own rows); new `get_public_comments_for_url(url)` RPC (single-page detail); new `get_feed_comments(user_id)` RPC (cross-URL feed, limit 50)
+
+### Inbox — Filter tabs
+- Extension / Webapp — Inbox now has **All / Mentions / Followed** filter tabs; Mentions shows only comments where the user is explicitly @-mentioned; Followed shows `recipient_type=follow` entries; empty state message adapts to the active tab
+
+### Tech — Audit & refactoring
+- Extension — Types: added `baseline` to `Profile`, `tags: string[] | null` to `CommentInboxItem` and `SentComment` to match the webapp (fields were present in DB but missing from extension types, causing silent data loss)
+- Extension — `Sent.tsx`: query now selects `tags` to match the updated `SentComment` type
+- Extension — `utils.ts`: `AVATAR_COLORS` unexported (internal constant, no external consumers)
+- Extension — `content.ts`: `escapeHtml` now also escapes single quotes (`'` → `&#39;`) for defense in depth
+- Extension — `Settings.tsx`: removed unnecessary `ContactProfile` type cast; unused import cleaned up
+- Webapp — `Avatar`: added `onError` fallback — broken image URLs now fall back to initials instead of showing a broken img icon (matched extension behavior)
+- Webapp — `App.tsx`: added catch-all `<Route path="*">` redirecting to `/` — unknown paths no longer render a blank page
+- Webapp — `AuthModal`: added `rate limit` error translation (was handled in extension but missing in webapp)
+- Webapp — `DashboardLayout`: `toggleFilter` wrapped in `useCallback` to prevent unnecessary `SearchBar` re-renders
+- Webapp — `SearchResultsPage`: removed redundant `ContactProfile` cast; added `mentions` to the sent comments query (was missing, causing type mismatch)
+- Webapp — `ContactsPage`: removed redundant `ContactProfile` casts; data fetching extracted to `useContacts` hook
+- Webapp — `PageComments`: replaced `void delete_token` TS suppression hack with `_` prefix destructuring
+- Webapp — New hooks: `useInboxComments`, `useSentComments`, `useContacts` — Supabase queries extracted out of UI components; `InboxPage` and `MyCommentsPage` updated to use them
+- Webapp — `utils.ts`: new `matchesSearch(q, active, fields)` utility centralising the search/filter logic used across Inbox, MyComments, and Search pages
+
+---
+
 ## [0.7.0] — 2026-06-25
 
 ### Social — Follow

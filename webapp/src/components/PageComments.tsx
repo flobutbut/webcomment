@@ -60,8 +60,7 @@ export function PageComments() {
     const channel = supabase
       .channel('demo_comments_rt')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'demo_comments' }, payload => {
-        const { delete_token, ...comment } = payload.new as DemoComment & { delete_token?: string }
-        void delete_token
+        const { delete_token: _, ...comment } = payload.new as DemoComment & { delete_token?: string }
         setComments(prev => [...prev, comment])
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'demo_comments' }, payload => {

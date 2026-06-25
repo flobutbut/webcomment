@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { avatarColor, avatarInitials } from '../lib/utils'
 
 type AvatarSize = 'sm' | 'md' | 'lg'
@@ -14,9 +15,17 @@ export function Avatar({ username, initials, avatarUrl, size = 'sm' }: {
   avatarUrl?: string | null
   size?:      AvatarSize
 }) {
+  const [imgError, setImgError] = useState(false)
   const cls = SIZES[size]
-  if (avatarUrl) {
-    return <img src={avatarUrl} alt={username} className={`${cls} rounded-full object-cover flex-shrink-0`} />
+  if (avatarUrl && !imgError) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={username}
+        className={`${cls} rounded-full object-cover flex-shrink-0`}
+        onError={() => setImgError(true)}
+      />
+    )
   }
   return (
     <div
