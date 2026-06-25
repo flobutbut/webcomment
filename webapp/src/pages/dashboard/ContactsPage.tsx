@@ -76,7 +76,7 @@ function ContactDetail({ contact, currentUserId, onAccept, onDecline, onRemove }
       ) : (
         <div>
           {comments.map((c, i) => (
-            <div key={c.id} className={i > 0 ? 'border-t border-gray-200 dark:border-dark-border' : ''}>
+            <div key={c.id}>
               <CommentDetail
                 url={c.url}
                 created_at={c.created_at}

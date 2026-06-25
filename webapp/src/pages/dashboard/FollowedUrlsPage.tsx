@@ -148,7 +148,7 @@ export function FollowedUrlsPage() {
               <EmptyState message="No public comments on this page." variant="list" />
             ) : (
               comments.map((c, i) => (
-                <div key={c.comment_id} className={i > 0 ? 'border-t border-gray-200 dark:border-dark-border' : ''}>
+                <div key={c.comment_id}>
                   <CommentDetail
                     url={c.url}
                     created_at={c.created_at}
