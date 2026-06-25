@@ -25,7 +25,7 @@ interface CommentDetailProps {
 function Screenshot({ url, pinX, pinY }: { url: string; pinX: number; pinY: number }) {
   const [err, setErr] = useState(false)
   return (
-    <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+    <div className="relative rounded-12 overflow-hidden border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-700">
       {err ? (
         <div className="w-full h-48 flex items-center justify-center">
           <ImageOff className="w-6 h-6 text-gray-300" />
@@ -86,7 +86,7 @@ export function CommentDetail({
           )}
           <div className="min-w-0">
             {from_username && (
-              <p className="text-sm font-semibold text-gray-900 truncate">{from_username}</p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{from_username}</p>
             )}
             <p className="text-xs text-gray-400">{date}</p>
           </div>
@@ -147,11 +147,11 @@ export function CommentDetail({
       {/* Capture + URL caption */}
       <div>
         <Screenshot url={screenshot_url} pinX={pin_x} pinY={pin_y} />
-        <p className="text-xs text-gray-400 mt-2 truncate">{hostname(url)}</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 truncate">{hostname(url)}</p>
       </div>
 
       {/* Comment */}
-      <BodyText body={body} mentions={mentions} className="text-sm text-gray-700 leading-relaxed" />
+      <BodyText body={body} mentions={mentions} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed" />
 
     </div>
   )

@@ -213,7 +213,7 @@ export function PageComments() {
               />
               {isActive && (
                 <div
-                  className={`absolute left-1/2 -translate-x-1/2 w-56 bg-[#111] border border-[#252525] rounded-lg p-3 shadow-2xl pointer-events-auto ${
+                  className={`absolute left-1/2 -translate-x-1/2 w-56 bg-[#111] border border-[#252525] rounded-9 p-3 shadow-2xl pointer-events-auto ${
                     tooltipBelow ? 'top-5' : 'bottom-5'
                   }`}
                 >
@@ -247,7 +247,7 @@ export function PageComments() {
       {composer && (
         <div
           data-composer="true"
-          className="fixed z-50 w-64 bg-[#111] border border-[#252525] rounded-xl p-4 shadow-2xl"
+          className="fixed z-50 w-64 bg-[#111] border border-[#252525] rounded-12 p-4 shadow-2xl"
           style={{ left: composerLeft, top: composerTop }}
           onClick={e => e.stopPropagation()}
         >
@@ -257,13 +257,13 @@ export function PageComments() {
             placeholder="Your name (optional)"
             value={author}
             onChange={e => setAuthor(e.target.value.slice(0, 30))}
-            className="w-full bg-[#0a0a0a] border border-[#222] rounded-lg px-3 py-2 text-xs text-zinc-300 placeholder-zinc-600 mb-2 focus:outline-none focus:border-blue-600/50 transition-colors"
+            className="w-full bg-[#0a0a0a] border border-[#222] rounded-6 px-3 py-2 text-xs text-zinc-300 placeholder-zinc-600 mb-2 focus:outline-none focus:border-blue-600/50 transition-colors"
           />
           <textarea
             placeholder="Leave a comment…"
             value={message}
             onChange={e => setMessage(e.target.value.slice(0, 200))}
-            className="w-full bg-[#0a0a0a] border border-[#222] rounded-lg px-3 py-2 text-xs text-zinc-300 placeholder-zinc-600 mb-2 resize-none h-20 focus:outline-none focus:border-blue-600/50 transition-colors"
+            className="w-full bg-[#0a0a0a] border border-[#222] rounded-6 px-3 py-2 text-xs text-zinc-300 placeholder-zinc-600 mb-2 resize-none h-20 focus:outline-none focus:border-blue-600/50 transition-colors"
             autoFocus
             onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSubmit() }}
           />
@@ -279,7 +279,7 @@ export function PageComments() {
               <button
                 onClick={handleSubmit}
                 disabled={!message.trim() || submitting}
-                className="text-xs bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white px-3 py-1 rounded-lg transition-colors"
+                className="text-xs bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white px-3 py-1 rounded-6 transition-colors"
               >
                 {submitting ? '…' : 'Post'}
               </button>

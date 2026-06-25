@@ -74,7 +74,7 @@ export default function Landing() {
             </button>
             <button
               onClick={() => setModal('signup')}
-              className="text-sm bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-4 py-1.5 rounded-lg transition-colors font-semibold"
+              className="text-sm bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-4 py-1.5 rounded-6 transition-colors font-semibold"
             >
               Get started
             </button>
@@ -116,14 +116,14 @@ export default function Landing() {
               href={GITHUB_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 bg-white text-black px-6 py-3 rounded-xl font-semibold text-sm hover:bg-zinc-100 active:bg-zinc-200 transition-colors w-full sm:w-auto justify-center"
+              className="flex items-center gap-2 bg-white text-black px-6 py-3 rounded-9 font-semibold text-sm hover:bg-zinc-100 active:bg-zinc-200 transition-colors w-full sm:w-auto justify-center"
             >
               <GitHubIcon />
               Get the extension
             </a>
             <button
               onClick={() => setModal('signup')}
-              className="flex items-center gap-2 border border-[#222] text-zinc-400 hover:text-white hover:border-[#333] px-6 py-3 rounded-xl font-medium text-sm transition-all w-full sm:w-auto justify-center"
+              className="flex items-center gap-2 border border-[#222] text-zinc-400 hover:text-white hover:border-[#333] px-6 py-3 rounded-9 font-medium text-sm transition-all w-full sm:w-auto justify-center"
             >
               Create account →
             </button>
@@ -188,7 +188,7 @@ export default function Landing() {
             {USE_CASES.map(uc => (
               <div
                 key={uc.id}
-                className="border border-[#141414] bg-[#0a0a0a] hover:border-[#232323] hover:bg-[#0d0d0d] rounded-xl p-6 transition-all duration-200 group cursor-default"
+                className="border border-[#141414] bg-[#0a0a0a] hover:border-[#232323] hover:bg-[#0d0d0d] rounded-12 p-6 transition-all duration-200 group cursor-default"
               >
                 <div className="flex items-start justify-between mb-5">
                   <span className="font-mono text-[10px] text-zinc-500">[{uc.id}]</span>
@@ -209,7 +209,7 @@ export default function Landing() {
       {/* ── Download CTA ────────────────────────────────────────── */}
       <section className="py-28 px-6 border-t border-[#111]">
         <div className="max-w-5xl mx-auto">
-          <div className="relative bg-[#090d14] border border-[#1a2540] rounded-2xl p-12 md:p-16 text-center overflow-hidden">
+          <div className="relative bg-[#090d14] border border-[#1a2540] rounded-18 p-12 md:p-16 text-center overflow-hidden">
             {/* grid overlay */}
             <div className="absolute inset-0 hero-grid opacity-40" />
             {/* top line */}
@@ -236,7 +236,7 @@ export default function Landing() {
                   href={GITHUB_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-7 py-3.5 rounded-xl font-semibold text-sm transition-colors"
+                  className="flex items-center gap-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-7 py-3.5 rounded-9 font-semibold text-sm transition-colors"
                 >
                   <GitHubIcon />
                   View on GitHub

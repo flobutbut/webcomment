@@ -114,7 +114,11 @@ Then update DNS at Hostinger: add a CNAME record pointing to `cname.vercel-dns.c
 - Short description of what changed and why, scoped to the affected area (Extension / Webapp / Backend)
 ```
 
-When a version is released (zip exported or version bumped in `manifest.json`), promote `[Unreleased]` to `## [x.y.z] — YYYY-MM-DD`.
+**CHANGELOG rules — mandatory:**
+
+- **One `[Unreleased]` block only.** All in-progress changes accumulate there. Never open a second unpublished version block.
+- **Never pre-number a version.** Do not write `## [0.9.0]` until the moment of actual publication.
+- **Publish = promote.** Only when releasing (version bumped in `manifest.json` and pushed to GitHub), replace `[Unreleased]` with `## [x.y.z] — YYYY-MM-DD`.
 
 ## Reference docs
 
@@ -124,3 +128,4 @@ When a version is released (zip exported or version bumped in `manifest.json`), 
 - Extension detail: `docs/EXTENSION.md`
 - Roadmap: `docs/ROADMAP.md`
 - Design: `docs/DESIGN.md`
+- RGPD : `docs/RGPD.md`

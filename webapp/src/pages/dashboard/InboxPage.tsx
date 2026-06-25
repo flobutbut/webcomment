@@ -36,18 +36,18 @@ export function InboxPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-5 py-2.5 border-b border-gray-200 flex items-center justify-between flex-shrink-0 gap-4 min-h-[49px]">
-        <h1 className="text-sm font-semibold text-gray-900 flex-shrink-0">Inbox</h1>
+      <div className="px-5 py-2.5 border-b border-gray-200 dark:border-dark-border flex items-center justify-between flex-shrink-0 gap-4 min-h-[49px]">
+        <h1 className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex-shrink-0">Inbox</h1>
         <div className="flex-1 flex justify-center">
-          <div className="inline-flex bg-gray-100 rounded-lg p-0.5">
+          <div className="inline-flex bg-gray-100 dark:bg-dark-700 rounded-9 p-0.5">
             {INBOX_TABS.map(t => (
               <button
                 key={t.value}
                 onClick={() => setTab(t.value)}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-all duration-150 ${
+                className={`px-3 py-1 rounded-6 text-xs font-medium transition-all duration-150 ${
                   tab === t.value
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
+                    ? 'bg-white dark:bg-dark-800 text-gray-900 dark:text-gray-100 shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                 }`}
               >
                 {t.label}
@@ -56,7 +56,7 @@ export function InboxPage() {
           </div>
         </div>
         {!loading && (
-          <span className="text-xs text-gray-400 flex-shrink-0">
+          <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">
             {filtered.length} comment{filtered.length !== 1 ? 's' : ''}
           </span>
         )}
@@ -83,7 +83,7 @@ export function InboxPage() {
         ) : (
           <div>
             {filtered.map((comment, i) => (
-              <div key={comment.recipient_id} className={i > 0 ? 'border-t border-gray-200' : ''}>
+              <div key={comment.recipient_id} className={i > 0 ? 'border-t border-gray-200 dark:border-dark-border' : ''}>
                 <CommentDetail
                   url={comment.url}
                   created_at={comment.created_at}

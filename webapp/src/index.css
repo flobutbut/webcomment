@@ -1,6 +1,19 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
+  /* ── Border radius scale (3px grid) ─────────────────────────── */
+  --radius-0:    0px;
+  --radius-3:    3px;
+  --radius-6:    6px;
+  --radius-9:    9px;
+  --radius-12:   12px;
+  --radius-15:   15px;
+  --radius-18:   18px;
+  --radius-24:   24px;
+  --radius-32:   32px;
+  --radius-full: 9999px;
+
   /* ── Dark theme — background scale ──────────────────────────── */
   --color-dark-950:   #050505;
   --color-dark-900:   #080808;

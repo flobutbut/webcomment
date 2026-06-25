@@ -3,9 +3,32 @@
 All notable changes to WebComment are documented here.
 Format: `## [version] — YYYY-MM-DD`, most recent first.
 
+## Rules — to follow absolutely on every write
+
+1. **One version at a time.** There must never be more than one unpublished version block. All in-progress changes accumulate under a single `## [Unreleased]` section until the version is published.
+2. **No pre-numbered unreleased versions.** Never write `## [0.9.0]` with a future date while work is still ongoing. Use `## [Unreleased]` until the moment of publication.
+3. **Publication = version number + date.** Only when actually releasing (zip exported or version bumped in `manifest.json` and pushed), replace `[Unreleased]` with `## [x.y.z] — YYYY-MM-DD`.
+4. **Accumulate, don't split.** If multiple features land before a release, they all go under the same `## [Unreleased]` block — never open a second one.
+
 ---
 
-## [Unreleased]
+## [0.9.0] — 2026-06-26
+
+### Dark mode — Webapp dashboard
+
+The webapp dashboard now supports full dark mode with three modes: **Light**, **Dark**, and **System** (follows OS preference).
+
+- **Theme toggle** — A sun/moon icon button in the dashboard header (top-right, next to the user menu) switches instantly between light and dark. Clicking always lands on an explicit Light or Dark preference, never on System.
+- **Appearance setting** — Settings page gains an Appearance section with a Light / Dark / System pill selector for users who prefer the full control.
+- **Zero flash on load** — An inline script in `index.html` reads the saved preference and applies the `.dark` class before the first paint, preventing any white flash.
+- **Persistent** — Chosen theme is saved to `localStorage` and restored on every page load.
+- **Full coverage** — Sidebar, header, all dashboard pages (Inbox, My Comments, Feed, Contacts, Search, Settings), modals, and every shared component (Button, Input, IconButton, PageHeader, EmptyState) are fully themed. Custom dark background and border tokens (`dark-800` → `dark-900`, `dark-border-*`) keep contrast ratios consistent across surfaces.
+
+### Design system — Components & spacing
+
+- **`IconButton` component** — New reusable icon-only button (`default` / `danger` variant) introduced in both the extension and the webapp; replaces all hand-rolled `<button className="p-1 …">` patterns across Inbox, Sent, Feed, Settings, SearchBar, FollowedUrlsPage, MyCommentsPage, and the install banner.
+- **`Button` system (Extension)** — `size` prop added (`sm` / `md`); new `success` variant (green border) replaces the "Mark as resolved" workaround; `secondary` variant replaces remaining raw Cancel buttons.
+- **Border radius token scale** — A 3 px grid (`3 / 6 / 9 / 12 / 15 / 18 / 24 / 32 px + full`) is now defined in `@theme` for both the extension and the webapp; every `rounded-lg`, `rounded-xl`, `rounded-2xl` occurrence replaced with the matching named token (`rounded-6`, `rounded-9`, `rounded-12`, …) for visual consistency.
 
 ---
 

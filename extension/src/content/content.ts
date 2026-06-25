@@ -267,7 +267,7 @@ function showComposerOverlay(pinX: number, pinY: number) {
       #close {
         background: none; border: none; cursor: pointer;
         color: #94a3b8; font-size: 15px; line-height: 1;
-        padding: 2px 4px; border-radius: 4px; transition: color 0.1s;
+        padding: 2px 4px; border-radius: 3px; transition: color 0.1s;
       }
       #close:hover { color: #475569; }
 
@@ -279,7 +279,7 @@ function showComposerOverlay(pinX: number, pinY: number) {
 
       #body-area { padding: 10px 14px; }
       #message-input {
-        width: 100%; border: 1px solid #e2e8f0; border-radius: 7px;
+        width: 100%; border: 1px solid #e2e8f0; border-radius: 6px;
         padding: 7px 10px; font-size: 13px; color: #0f172a; background: #fff;
         resize: none; outline: none; font-family: inherit; line-height: 1.5;
         transition: border-color 0.15s, box-shadow 0.15s;
@@ -292,7 +292,7 @@ function showComposerOverlay(pinX: number, pinY: number) {
       }
       #status { font-size: 12px; color: #ef4444; flex: 1; }
       #cancel {
-        background: none; border: 1px solid #e2e8f0; border-radius: 7px;
+        background: none; border: 1px solid #e2e8f0; border-radius: 6px;
         padding: 6px 12px; font-size: 12px; color: #64748b; cursor: pointer;
         font-family: inherit; transition: background 0.1s;
         display: flex; align-items: center; gap: 5px;
@@ -303,7 +303,7 @@ function showComposerOverlay(pinX: number, pinY: number) {
         border-radius: 3px; padding: 1px 4px; font-family: inherit;
       }
       #send {
-        background: #2563EB; color: #fff; border: none; border-radius: 7px;
+        background: #2563EB; color: #fff; border: none; border-radius: 6px;
         padding: 6px 14px; font-size: 12px; font-weight: 500; cursor: pointer;
         font-family: inherit; transition: background 0.15s;
       }
@@ -593,7 +593,7 @@ async function showPinDetail(comment: CommentInboxItem, pinEl: HTMLElement) {
       #date { font-size: 11px; color: #94a3b8; margin-top: 1px; }
       #close-btn {
         background: none; border: none; cursor: pointer; color: #94a3b8;
-        padding: 2px; border-radius: 4px; display: flex; align-items: center;
+        padding: 2px; border-radius: 3px; display: flex; align-items: center;
         transition: color 0.1s;
       }
       #close-btn:hover { color: #475569; }
@@ -604,7 +604,7 @@ async function showPinDetail(comment: CommentInboxItem, pinEl: HTMLElement) {
         display: flex; gap: 8px; padding: 0 12px 10px;
       }
       button.action {
-        border: none; border-radius: 7px; cursor: pointer;
+        border: none; border-radius: 6px; cursor: pointer;
         padding: 5px 10px; font-size: 12px; font-weight: 500;
         font-family: inherit; display: flex; align-items: center; gap: 4px;
         transition: background 0.1s;
@@ -623,13 +623,13 @@ async function showPinDetail(comment: CommentInboxItem, pinEl: HTMLElement) {
       #confirm-text { font-size: 12px; color: #475569; text-align: center; margin-bottom: 8px; }
       #confirm-btns { display: flex; gap: 6px; }
       button.confirm-cancel {
-        flex: 1; border: 1px solid #e2e8f0; background: none; border-radius: 7px;
+        flex: 1; border: 1px solid #e2e8f0; background: none; border-radius: 6px;
         padding: 5px 10px; font-size: 12px; color: #64748b; cursor: pointer;
         font-family: inherit; transition: background 0.1s;
       }
       button.confirm-cancel:hover { background: #f8fafc; }
       button.confirm-delete {
-        flex: 1; border: none; background: #ef4444; color: #fff; border-radius: 7px;
+        flex: 1; border: none; background: #ef4444; color: #fff; border-radius: 6px;
         padding: 5px 10px; font-size: 12px; font-weight: 500; cursor: pointer;
         font-family: inherit; transition: background 0.1s;
       }
@@ -800,7 +800,7 @@ async function showUserProfile(comment: CommentInboxItem, pinEl: HTMLElement) {
       }
       #back-btn, #close-btn {
         background: none; border: none; cursor: pointer; color: #94a3b8;
-        padding: 2px; border-radius: 4px; display: flex; align-items: center;
+        padding: 2px; border-radius: 3px; display: flex; align-items: center;
         transition: color 0.1s; flex-shrink: 0;
       }
       #back-btn:hover, #close-btn:hover { color: #475569; }
@@ -841,7 +841,7 @@ async function showUserProfile(comment: CommentInboxItem, pinEl: HTMLElement) {
       #empty-msg { font-size: 12px; color: #94a3b8; text-align: center; padding: 8px 0 4px; }
       #footer { padding: 10px 12px 12px; border-top: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 8px; }
       #add-contact-btn {
-        width: 100%; border: none; border-radius: 7px; cursor: pointer;
+        width: 100%; border: none; border-radius: 6px; cursor: pointer;
         padding: 7px 12px; font-size: 12px; font-weight: 500; font-family: inherit;
         background: #2563EB; color: #fff; transition: background 0.1s;
         display: flex; align-items: center; justify-content: center; gap: 4px;
@@ -850,7 +850,7 @@ async function showUserProfile(comment: CommentInboxItem, pinEl: HTMLElement) {
       #add-contact-btn:disabled { opacity: 0.6; cursor: default; }
       #add-contact-btn.sent { background: #16a34a; }
       #follow-btn {
-        width: 100%; border: 1px solid #2563EB; border-radius: 7px; cursor: pointer;
+        width: 100%; border: 1px solid #2563EB; border-radius: 6px; cursor: pointer;
         padding: 7px 12px; font-size: 12px; font-weight: 500; font-family: inherit;
         background: #fff; color: #2563EB; transition: all 0.1s;
         display: flex; align-items: center; justify-content: center; gap: 4px;
@@ -1321,7 +1321,7 @@ function showErrorScreen(comment: CommentInboxItem) {
         <p style="color:#94a3b8;font-size:0.8rem;margin-bottom:1.5rem">
           You don't have access — here's what they were seeing:
         </p>
-        <div style="position:relative;display:inline-block;border-radius:8px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.12)">
+        <div style="position:relative;display:inline-block;border-radius:9px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.12)">
           <img src="${escapeHtml(comment.screenshot_url)}" style="max-width:100%;display:block" />
           <div style="position:absolute;left:${comment.pin_x}%;top:${comment.pin_y}%;
             width:20px;height:20px;border-radius:50%;background:#2563EB;border:2px solid white;

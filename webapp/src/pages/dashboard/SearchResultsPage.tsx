@@ -18,12 +18,12 @@ function Thumb({ url, pinX, pinY }: { url: string; pinX: number; pinY: number })
   return (
     <div className="relative w-12 h-8 flex-shrink-0">
       {err ? (
-        <div className="w-12 h-8 bg-gray-50 rounded border border-gray-200 flex items-center justify-center">
-          <ImageOff className="w-3 h-3 text-gray-300" />
+        <div className="w-12 h-8 bg-gray-50 dark:bg-dark-700 rounded-6 border border-gray-200 dark:border-dark-border flex items-center justify-center">
+          <ImageOff className="w-3 h-3 text-gray-300 dark:text-gray-600" />
         </div>
       ) : (
         <>
-          <img src={url} className="w-12 h-8 object-cover rounded border border-gray-200" alt="" onError={() => setErr(true)} />
+          <img src={url} className="w-12 h-8 object-cover rounded-6 border border-gray-200 dark:border-dark-border" alt="" onError={() => setErr(true)} />
           <div className="absolute w-2 h-2 rounded-full bg-blue-600 border border-white shadow-sm"
             style={{ left: `${pinX}%`, top: `${pinY}%`, transform: 'translate(-50%,-50%)' }} />
         </>
@@ -34,9 +34,9 @@ function Thumb({ url, pinX, pinY }: { url: string; pinX: number; pinY: number })
 
 function SectionHeader({ label, count }: { label: string; count: number }) {
   return (
-    <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-      <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{label}</span>
-      <span className="text-[10px] text-gray-400">{count}</span>
+    <div className="px-4 py-2 bg-gray-50 dark:bg-dark-700 border-b border-gray-200 dark:border-dark-border flex items-center justify-between">
+      <span className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{label}</span>
+      <span className="text-[10px] text-gray-400 dark:text-gray-500">{count}</span>
     </div>
   )
 }
@@ -53,10 +53,10 @@ function ContactCard({ contact, userId }: { contact: Contact; userId: string }) 
           size="lg"
         />
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-gray-900">{other.username}</p>
-          {other.baseline && <p className="text-xs text-gray-400">{other.baseline}</p>}
+          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{other.username}</p>
+          {other.baseline && <p className="text-xs text-gray-400 dark:text-gray-500">{other.baseline}</p>}
           {contact.status === 'pending' && (
-            <span className="inline-block mt-1 text-[10px] font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
+            <span className="inline-block mt-1 text-[10px] font-medium text-amber-600 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-3 px-1.5 py-0.5">
               Pending
             </span>
           )}
@@ -150,19 +150,19 @@ export function SearchResultsPage({ userId, search, filterTypes }: {
 
   const ROW = (active: boolean) =>
     `w-full flex items-center gap-3 px-4 py-3 text-left cursor-pointer transition-colors ${
-      active ? 'bg-blue-50' : 'hover:bg-gray-50'
+      active ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-dark-hover'
     }`
 
   return (
     <div className="flex h-full overflow-hidden">
 
       {/* ── List ── */}
-      <div className="w-80 flex-shrink-0 border-r border-gray-200 flex flex-col overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-          <p className="text-xs text-gray-500">
-            Results for <span className="font-semibold text-gray-900">"{search}"</span>
+      <div className="w-80 flex-shrink-0 border-r border-gray-200 dark:border-dark-border flex flex-col overflow-hidden">
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-dark-border flex items-center justify-between flex-shrink-0">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Results for <span className="font-semibold text-gray-900 dark:text-gray-100">"{search}"</span>
           </p>
-          <span className="text-[11px] text-gray-400">{total}</span>
+          <span className="text-[11px] text-gray-400 dark:text-gray-500">{total}</span>
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -173,7 +173,7 @@ export function SearchResultsPage({ userId, search, filterTypes }: {
               {filteredInbox.length > 0 && (
                 <section>
                   <SectionHeader label="Inbox" count={filteredInbox.length} />
-                  <div className="divide-y divide-gray-200">
+                  <div className="divide-y divide-gray-200 dark:divide-dark-border">
                     {filteredInbox.map(c => {
                       const sel: Selected = { kind: 'inbox', item: c }
                       return (
@@ -181,11 +181,11 @@ export function SearchResultsPage({ userId, search, filterTypes }: {
                           <Thumb url={c.screenshot_url} pinX={c.pin_x} pinY={c.pin_y} />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-2 mb-0.5">
-                              <span className="text-xs font-semibold text-gray-900 truncate">{c.from_username}</span>
-                              <span className="text-[11px] text-gray-400 flex-shrink-0">{timeAgo(c.created_at)}</span>
+                              <span className="text-xs font-semibold text-gray-900 dark:text-gray-100 truncate">{c.from_username}</span>
+                              <span className="text-[11px] text-gray-400 dark:text-gray-500 flex-shrink-0">{timeAgo(c.created_at)}</span>
                             </div>
-                            <p className="text-[11px] text-gray-400 truncate mb-0.5">{hostname(c.url)}</p>
-                            <p className="text-xs text-gray-600 truncate">{c.body}</p>
+                            <p className="text-[11px] text-gray-400 dark:text-gray-500 truncate mb-0.5">{hostname(c.url)}</p>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{c.body}</p>
                           </div>
                         </button>
                       )
@@ -197,7 +197,7 @@ export function SearchResultsPage({ userId, search, filterTypes }: {
               {filteredSent.length > 0 && (
                 <section>
                   <SectionHeader label="My Comments" count={filteredSent.length} />
-                  <div className="divide-y divide-gray-200">
+                  <div className="divide-y divide-gray-200 dark:divide-dark-border">
                     {filteredSent.map(c => {
                       const sel: Selected = { kind: 'sent', item: c }
                       return (
@@ -205,10 +205,10 @@ export function SearchResultsPage({ userId, search, filterTypes }: {
                           <Thumb url={c.screenshot_url} pinX={c.pin_x} pinY={c.pin_y} />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-2 mb-0.5">
-                              <span className="text-[11px] text-gray-400 truncate">{hostname(c.url)}</span>
-                              <span className="text-[11px] text-gray-400 flex-shrink-0">{timeAgo(c.created_at)}</span>
+                              <span className="text-[11px] text-gray-400 dark:text-gray-500 truncate">{hostname(c.url)}</span>
+                              <span className="text-[11px] text-gray-400 dark:text-gray-500 flex-shrink-0">{timeAgo(c.created_at)}</span>
                             </div>
-                            <p className="text-xs text-gray-600 truncate">{c.body}</p>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{c.body}</p>
                           </div>
                         </button>
                       )
@@ -220,7 +220,7 @@ export function SearchResultsPage({ userId, search, filterTypes }: {
               {filteredContacts.length > 0 && (
                 <section>
                   <SectionHeader label="Contacts" count={filteredContacts.length} />
-                  <div className="divide-y divide-gray-200">
+                  <div className="divide-y divide-gray-200 dark:divide-dark-border">
                     {filteredContacts.map(c => {
                       const other = c.addressee.id === userId ? c.requester : c.addressee
                       const sel: Selected = { kind: 'contact', item: c }
@@ -233,11 +233,11 @@ export function SearchResultsPage({ userId, search, filterTypes }: {
                             size="sm"
                           />
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs font-semibold text-gray-900 truncate">{other.username}</p>
-                            {other.baseline && <p className="text-xs text-gray-400 truncate">{other.baseline}</p>}
+                            <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 truncate">{other.username}</p>
+                            {other.baseline && <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{other.baseline}</p>}
                           </div>
                           {c.status === 'pending' && (
-                            <span className="text-[10px] text-gray-400 flex-shrink-0">pending</span>
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500 flex-shrink-0">pending</span>
                           )}
                         </button>
                       )

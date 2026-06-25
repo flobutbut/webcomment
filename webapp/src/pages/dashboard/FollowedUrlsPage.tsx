@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { Plus, Rss, Trash2 } from 'lucide-react'
+import { IconButton } from '../../components/IconButton'
 import { Spinner } from '../../components/Spinner'
 import { EmptyState } from '../../components/EmptyState'
 import { Input } from '../../components/Input'
@@ -63,12 +64,12 @@ export function FollowedUrlsPage() {
     <div className="flex h-full">
 
       {/* Left column — URL list */}
-      <div className="w-72 flex-shrink-0 border-r border-gray-200 flex flex-col">
-        <div className="px-4 py-3 border-b border-gray-200 flex-shrink-0 space-y-2">
+      <div className="w-72 flex-shrink-0 border-r border-gray-200 dark:border-dark-border flex flex-col">
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-dark-border flex-shrink-0 space-y-2">
           <div className="flex items-center justify-between">
-            <h1 className="text-sm font-semibold text-gray-900">Followed URLs</h1>
+            <h1 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Followed URLs</h1>
             {!loading && (
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-gray-400 dark:text-gray-500">
                 {follows.length} page{follows.length !== 1 ? 's' : ''}
               </span>
             )}
@@ -84,7 +85,7 @@ export function FollowedUrlsPage() {
             <button
               type="submit"
               disabled={adding || !input.trim()}
-              className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 transition-colors"
+              className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-6 bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 transition-colors"
               title="Follow URL"
             >
               <Plus className="w-4 h-4" />
@@ -105,28 +106,29 @@ export function FollowedUrlsPage() {
               <button
                 key={f.url}
                 onClick={() => selectUrl(f.url)}
-                className={`w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors group ${
-                  selectedUrl === f.url ? 'bg-blue-50 border-blue-100' : ''
+                className={`w-full text-left px-4 py-3 border-b border-gray-100 dark:border-dark-border-xs hover:bg-gray-50 dark:hover:bg-dark-hover transition-colors group ${
+                  selectedUrl === f.url ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/40' : ''
                 }`}
               >
                 <div className="flex items-start gap-2">
                   <img
                     src={`https://www.google.com/s2/favicons?domain=${hostname(f.url)}&sz=16`}
-                    className="w-4 h-4 mt-0.5 flex-shrink-0 rounded"
+                    className="w-4 h-4 mt-0.5 flex-shrink-0 rounded-3"
                     alt=""
                     onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-gray-900 truncate">{hostname(f.url)}</p>
-                    <p className="text-[11px] text-gray-400 truncate">{f.url}</p>
+                    <p className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">{hostname(f.url)}</p>
+                    <p className="text-[11px] text-gray-400 dark:text-gray-500 truncate">{f.url}</p>
                   </div>
-                  <button
+                  <IconButton
+                    variant="danger"
                     onClick={e => { e.stopPropagation(); handleUnfollow(f.url) }}
-                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition-all flex-shrink-0"
+                    className="opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
                     title="Unfollow"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  </IconButton>
                 </div>
               </button>
             ))
@@ -166,8 +168,8 @@ export function FollowedUrlsPage() {
         ) : (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
-              <Rss className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-sm text-gray-400">Select a URL to see its public comments</p>
+              <Rss className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+              <p className="text-sm text-gray-400 dark:text-gray-500">Select a URL to see its public comments</p>
             </div>
           </div>
         )}

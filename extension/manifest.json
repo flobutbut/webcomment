@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "WebComment",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Private anchored comments on any web page.",
 
   "browser_specific_settings": {

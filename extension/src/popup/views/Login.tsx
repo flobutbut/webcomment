@@ -97,7 +97,7 @@ export function Login() {
 
         {/* Preview tile — replaces the username field on signup */}
         {isSignUp && (
-          <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-200">
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-9 bg-gray-50 border border-gray-200">
             <div className={`group w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-150 cursor-text
               ${avatarLetters
                 ? 'bg-blue-100 hover:bg-blue-200 has-[:focus]:ring-2 has-[:focus]:ring-blue-400 has-[:focus]:ring-offset-1'
@@ -127,7 +127,7 @@ export function Login() {
         )}
 
         {/* Identity block */}
-        <div className="rounded-lg border border-gray-200 divide-y divide-gray-200">
+        <div className="rounded-9 border border-gray-200 divide-y divide-gray-200">
           <input
             type="email"
             name="email"
@@ -135,13 +135,13 @@ export function Login() {
             placeholder="Email"
             value={email}
             onChange={e => setEmail(e.target.value)}
-            className={`w-full px-3 py-2 text-[13px] bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500/40 ${isSignUp ? 'rounded-lg' : 'rounded-t-lg'}`}
+            className={`w-full px-3 py-2 text-[13px] bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500/40 ${isSignUp ? 'rounded-6' : 'rounded-t-6'}`}
             required
           />
         </div>
 
         {/* Password block */}
-        <div className="rounded-lg border border-gray-200 divide-y divide-gray-200">
+        <div className="rounded-9 border border-gray-200 divide-y divide-gray-200">
           <div className="relative">
             <input
               type={showPwd ? 'text' : 'password'}
@@ -150,7 +150,7 @@ export function Login() {
               placeholder="Password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className={`w-full px-3 py-2 pr-16 text-[13px] bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500/40 ${isSignUp ? 'rounded-t-lg' : 'rounded-lg'}`}
+              className={`w-full px-3 py-2 pr-16 text-[13px] bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500/40 ${isSignUp ? 'rounded-t-6' : 'rounded-6'}`}
               required
             />
             <button
@@ -169,7 +169,7 @@ export function Login() {
               placeholder="Confirm password"
               value={confirm}
               onChange={e => setConfirm(e.target.value)}
-              className="w-full px-3 py-2 text-[13px] bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500/40 rounded-b-lg"
+              className="w-full px-3 py-2 text-[13px] bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500/40 rounded-b-6"
               required
             />
           )}

@@ -6,7 +6,8 @@ import trash2Icon     from '@iconify-icons/lucide/trash-2'
 import checkIcon      from '@iconify-icons/lucide/check'
 import link2Icon      from '@iconify-icons/lucide/link-2'
 import imageOffIcon   from '@iconify-icons/lucide/image-off'
-import { Button }   from '../components/Button'
+import { Button }      from '../components/Button'
+import { IconButton }  from '../components/IconButton'
 import { Loading }  from '../components/Loading'
 import { BodyText } from '../components/BodyText'
 import { supabase } from '../../shared/supabase'
@@ -18,12 +19,12 @@ function ScreenshotThumbnail({ url, pinX, pinY }: { url: string; pinX: number; p
   return (
     <div className="relative flex-shrink-0 w-14 h-10">
       {err ? (
-        <div className="w-14 h-10 bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
+        <div className="w-14 h-10 bg-gray-100 rounded-6 border border-gray-200 flex items-center justify-center">
           <Icon icon={imageOffIcon} width={12} height={12} />
         </div>
       ) : (
         <>
-          <img src={url} className="w-14 h-10 object-cover rounded border border-gray-200" alt="" onError={() => setErr(true)} />
+          <img src={url} className="w-14 h-10 object-cover rounded-6 border border-gray-200" alt="" onError={() => setErr(true)} />
           <div className="absolute w-2.5 h-2.5 rounded-full bg-blue-600 border border-white shadow-sm"
             style={{ left: `${pinX}%`, top: `${pinY}%`, transform: 'translate(-50%, -50%)' }} />
         </>
@@ -65,26 +66,19 @@ function Detail({
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
-        <button
-          onClick={onBack}
-          className="text-gray-400 hover:text-gray-600 transition-colors duration-150"
-        >
+        <IconButton onClick={onBack}>
           <Icon icon={arrowLeftIcon} width={18} height={18} />
-        </button>
+        </IconButton>
         <span className="text-[12px] text-gray-500 truncate flex-1">{hostname(comment.url)}</span>
         {!confirming && (
-          <button
-            onClick={() => setConfirming(true)}
-            className="text-gray-400 hover:text-red-500 transition-colors duration-150 p-1 rounded"
-            title="Delete"
-          >
+          <IconButton variant="danger" onClick={() => setConfirming(true)} title="Delete">
             <Icon icon={trash2Icon} width={14} height={14} />
-          </button>
+          </IconButton>
         )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        <div className="relative rounded-lg overflow-hidden border border-gray-200">
+        <div className="relative rounded-9 overflow-hidden border border-gray-200">
           {imgError ? (
             <div className="w-full h-32 bg-gray-50 flex flex-col items-center justify-center gap-2 text-gray-400">
               <Icon icon={imageOffIcon} width={20} height={20} />
@@ -223,7 +217,7 @@ export function Sent({ userId, onCommentDeleted }: { userId: string; onCommentDe
             onClick={e => handleQuickDelete(e, comment)}
             disabled={deletingId === comment.id}
             title="Delete"
-            className="absolute right-3 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 disabled:opacity-30 transition-all duration-150 p-1 rounded"
+            className="absolute right-3 opacity-0 group-hover:opacity-100 transition-all duration-150 p-1 rounded-3 text-gray-400 hover:text-red-500 disabled:opacity-50"
           >
             <Icon icon={trash2Icon} width={14} height={14} />
           </button>

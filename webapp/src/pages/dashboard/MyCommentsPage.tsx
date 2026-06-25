@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { Trash2, ImageOff } from 'lucide-react'
+import { IconButton } from '../../components/IconButton'
 import { supabase } from '../../lib/supabase'
 import { hostname, timeAgo, resolveBody, matchesSearch } from '../../lib/utils'
 import { useSentComments } from '../../lib/useSentComments'
@@ -15,12 +16,12 @@ function ScreenshotThumb({ url, pinX, pinY }: { url: string; pinX: number; pinY:
   return (
     <div className="relative w-14 h-10 flex-shrink-0">
       {err ? (
-        <div className="w-14 h-10 bg-gray-50 rounded border border-gray-200 flex items-center justify-center">
-          <ImageOff className="w-3 h-3 text-gray-300" />
+        <div className="w-14 h-10 bg-gray-50 dark:bg-dark-700 rounded-6 border border-gray-200 dark:border-dark-border flex items-center justify-center">
+          <ImageOff className="w-3 h-3 text-gray-300 dark:text-gray-600" />
         </div>
       ) : (
         <>
-          <img src={url} className="w-14 h-10 object-cover rounded border border-gray-200" alt="" onError={() => setErr(true)} />
+          <img src={url} className="w-14 h-10 object-cover rounded-6 border border-gray-200 dark:border-dark-border" alt="" onError={() => setErr(true)} />
           <div className="absolute w-2.5 h-2.5 rounded-full bg-blue-600 border border-white shadow-sm"
             style={{ left: `${pinX}%`, top: `${pinY}%`, transform: 'translate(-50%, -50%)' }} />
         </>
@@ -70,18 +71,20 @@ export function MyCommentsPage() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* List */}
-        <div className="w-80 flex-shrink-0 border-r border-gray-200 overflow-y-auto">
+        <div className="w-80 flex-shrink-0 border-r border-gray-200 dark:border-dark-border overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-20"><Spinner /></div>
           ) : filtered.length === 0 ? (
             <EmptyState message={search ? 'No results.' : 'No comments sent yet.'} variant="list" />
           ) : (
-            <div className="divide-y divide-gray-200">
+            <div className="divide-y divide-gray-200 dark:divide-dark-border">
               {filtered.map(comment => (
                 <div
                   key={comment.id}
                   className={`group relative flex items-center transition-colors ${
-                    selected?.id === comment.id ? 'bg-blue-50' : 'hover:bg-gray-50'
+                    selected?.id === comment.id
+                      ? 'bg-blue-50 dark:bg-blue-900/20'
+                      : 'hover:bg-gray-50 dark:hover:bg-dark-hover'
                   }`}
                 >
                   <button
@@ -91,19 +94,20 @@ export function MyCommentsPage() {
                     <ScreenshotThumb url={comment.screenshot_url} pinX={comment.pin_x} pinY={comment.pin_y} />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-1 mb-0.5">
-                        <span className="text-[11px] text-gray-400 truncate">{hostname(comment.url)}</span>
-                        <span className="text-[11px] text-gray-400 flex-shrink-0">{timeAgo(comment.created_at)}</span>
+                        <span className="text-[11px] text-gray-400 dark:text-gray-500 truncate">{hostname(comment.url)}</span>
+                        <span className="text-[11px] text-gray-400 dark:text-gray-500 flex-shrink-0">{timeAgo(comment.created_at)}</span>
                       </div>
-                      <p className="text-xs text-gray-700 truncate">{resolveBody(comment.body, comment.mentions)}</p>
+                      <p className="text-xs text-gray-700 dark:text-gray-300 truncate">{resolveBody(comment.body, comment.mentions)}</p>
                     </div>
                   </button>
-                  <button
+                  <IconButton
+                    variant="danger"
                     onClick={e => handleQuickDelete(e, comment)}
                     disabled={deletingId === comment.id}
-                    className="absolute right-3 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 disabled:opacity-30 transition-all p-1 rounded"
+                    className="absolute right-3 opacity-0 group-hover:opacity-100 transition-all"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  </IconButton>
                 </div>
               ))}
             </div>

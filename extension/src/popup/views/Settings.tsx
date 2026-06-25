@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button }  from '../components/Button'
+import { Button } from '../components/Button'
 import { Loading } from '../components/Loading'
 import { Tabs }    from '../components/Tabs'
 import { Avatar }  from '../components/Avatar'
@@ -30,7 +30,7 @@ function ContactRow({
   const other = isAddressee ? contact.requester : contact.addressee
 
   return (
-    <div className="flex items-center gap-3 py-2.5 px-3 rounded-lg hover:bg-gray-50">
+    <div className="flex items-center gap-3 py-2.5 px-3 rounded-6 hover:bg-gray-50">
       <Avatar
         username={other.username}
         initials={other.initials}
@@ -43,18 +43,8 @@ function ContactRow({
       </div>
       {contact.status === 'pending' && isAddressee && (
         <div className="flex gap-1.5 flex-shrink-0">
-          <button
-            onClick={() => onAccept?.(contact.id)}
-            className="px-2.5 py-1 text-[11px] font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-          >
-            Accept
-          </button>
-          <button
-            onClick={() => onDecline?.(contact.id)}
-            className="px-2.5 py-1 text-[11px] rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
-          >
-            Decline
-          </button>
+          <Button size="sm" onClick={() => onAccept?.(contact.id)}>Accept</Button>
+          <Button size="sm" variant="secondary" onClick={() => onDecline?.(contact.id)}>Decline</Button>
         </div>
       )}
       {contact.status === 'pending' && !isAddressee && (
@@ -202,7 +192,7 @@ export function Settings({ profile, onClose, onContactChange }: { profile: Profi
         {tab === 'profile' && (
           <>
             {profile && (
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-9">
                 <Avatar
                   username={profile.username}
                   initials={profile.initials}
@@ -278,7 +268,7 @@ export function Settings({ profile, onClose, onContactChange }: { profile: Profi
                 value={query}
                 onChange={e => { setQuery(e.target.value); setAddStatus(null) }}
                 placeholder="Username or email"
-                className="w-full px-3 py-2 text-[13px] rounded-lg border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500/40"
+                className="w-full px-3 py-2 text-[13px] rounded-6 border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500/40"
               />
               {addStatus && (
                 <p className={`text-[11px] ${
@@ -292,13 +282,9 @@ export function Settings({ profile, onClose, onContactChange }: { profile: Profi
                 <Button type="submit" disabled={adding || !query.trim()}>
                   {adding ? '…' : 'Send request'}
                 </Button>
-                <button
-                  type="button"
-                  onClick={() => setAddOpen(false)}
-                  className="flex-shrink-0 px-3 py-2 text-[13px] rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
-                >
+                <Button type="button" variant="secondary" className="flex-shrink-0 w-auto px-3" onClick={() => setAddOpen(false)}>
                   Cancel
-                </button>
+                </Button>
               </div>
             </form>
           )}

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { Button } from './Button'
 
 interface Props {
   initialMode?: 'signin' | 'signup'
@@ -26,7 +27,7 @@ function translateError(msg: string): string {
 }
 
 const INPUT = `
-  w-full px-3 py-2.5 rounded-lg text-sm
+  w-full px-3 py-2.5 rounded-6 text-sm
   bg-dark-800 border border-dark-border text-white
   placeholder:text-zinc-700
   focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600/20
@@ -119,7 +120,7 @@ export function AuthModal({ initialMode = 'signin', onClose, onSuccess }: Props)
       onClick={onClose}
     >
       <div
-        className="bg-dark-700 border border-dark-border-sm rounded-2xl p-8 w-full max-w-sm mx-4 shadow-2xl"
+        className="bg-dark-700 border border-dark-border-sm rounded-18 p-8 w-full max-w-sm mx-4 shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
         {done ? (
@@ -140,7 +141,7 @@ export function AuthModal({ initialMode = 'signin', onClose, onSuccess }: Props)
             <Link
               to="/dashboard"
               onClick={onClose}
-              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold transition-colors mb-3"
+              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-6 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold transition-colors mb-3"
             >
               Open dashboard →
             </Link>
@@ -149,7 +150,7 @@ export function AuthModal({ initialMode = 'signin', onClose, onSuccess }: Props)
                 href="https://github.com/flobutbut/webcomment/releases"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-white hover:bg-zinc-100 active:bg-zinc-200 text-black text-sm font-semibold transition-colors mb-3"
+                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-6 bg-white hover:bg-zinc-100 active:bg-zinc-200 text-black text-sm font-semibold transition-colors mb-3"
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
@@ -164,12 +165,12 @@ export function AuthModal({ initialMode = 'signin', onClose, onSuccess }: Props)
         ) : (
           <>
             <div className="flex items-center justify-between mb-6">
-              <div className="flex gap-1 bg-dark-900 border border-dark-border-sm rounded-lg p-1">
+              <div className="flex gap-1 bg-dark-900 border border-dark-border-sm rounded-9 p-1">
                 {(['signin', 'signup'] as const).map(m => (
                   <button
                     key={m}
                     onClick={() => switchMode(m)}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                    className={`px-3 py-1.5 rounded-6 text-sm font-medium transition-all ${
                       mode === m ? 'bg-dark-hover text-white' : 'text-zinc-600 hover:text-zinc-400'
                     }`}
                   >
@@ -179,7 +180,7 @@ export function AuthModal({ initialMode = 'signin', onClose, onSuccess }: Props)
               </div>
               <button
                 onClick={onClose}
-                className="text-zinc-700 hover:text-zinc-400 transition-colors text-xl leading-none w-7 h-7 flex items-center justify-center rounded-md hover:bg-dark-hover"
+                className="text-zinc-700 hover:text-zinc-400 transition-colors text-xl leading-none w-7 h-7 flex items-center justify-center rounded-6 hover:bg-dark-hover"
               >
                 ×
               </button>
@@ -189,7 +190,7 @@ export function AuthModal({ initialMode = 'signin', onClose, onSuccess }: Props)
 
               {/* Username + avatar preview tile */}
               {mode === 'signup' && (
-                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-dark-800 border border-dark-border">
+                <div className="flex items-center gap-3 px-3 py-2.5 rounded-9 bg-dark-800 border border-dark-border">
                   <div className="relative group/avatar flex-shrink-0 cursor-text">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-150 ${
                       avatarLetters
@@ -283,20 +284,22 @@ export function AuthModal({ initialMode = 'signin', onClose, onSuccess }: Props)
               )}
 
               {error && (
-                <p className="text-red-400 text-xs font-mono border border-red-900/30 bg-red-900/10 rounded-lg px-3 py-2">
+                <p className="text-red-400 text-xs font-mono border border-red-900/30 bg-red-900/10 rounded-9 px-3 py-2">
                   {error}
                 </p>
               )}
 
-              <button
+              <Button
                 type="submit"
+                variant="primary"
+                size="lg"
                 disabled={loading}
-                className="w-full py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full justify-center"
               >
                 {loading
                   ? <span className="font-mono text-xs">// connecting...</span>
                   : mode === 'signin' ? 'Sign in' : 'Create account'}
-              </button>
+              </Button>
             </form>
           </>
         )}

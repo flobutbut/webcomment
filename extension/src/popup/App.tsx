@@ -168,7 +168,7 @@ export function App() {
           <button
             onClick={togglePins}
             title={pinsVisible ? 'Hide comments' : 'Show comments on the page'}
-            className={`flex items-center gap-1 px-2.5 py-1 text-[12px] rounded-md transition-colors duration-150 border ${
+            className={`flex items-center gap-1 px-2.5 py-1 text-[12px] rounded-6 transition-colors duration-150 border ${
               pinsVisible
                 ? 'border-blue-200 bg-blue-50 text-blue-600'
                 : 'border-gray-200 text-gray-500 hover:text-blue-600 hover:border-blue-300'
@@ -180,7 +180,7 @@ export function App() {
           <button
             onClick={() => setSettings(s => !s)}
             title="Settings"
-            className={`relative w-7 h-7 flex items-center justify-center rounded-md transition-colors duration-150 ${
+            className={`relative w-7 h-7 flex items-center justify-center rounded-6 transition-colors duration-150 ${
               settings ? 'bg-blue-50 text-blue-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
             }`}
           >

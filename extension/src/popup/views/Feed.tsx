@@ -5,7 +5,8 @@ import bookmarkCheckIcon from '@iconify-icons/lucide/bookmark-check'
 import arrowLeftIcon     from '@iconify-icons/lucide/arrow-left'
 import arrowRightIcon    from '@iconify-icons/lucide/arrow-right'
 import imageOffIcon      from '@iconify-icons/lucide/image-off'
-import { Loading }  from '../components/Loading'
+import { Loading }     from '../components/Loading'
+import { IconButton }  from '../components/IconButton'
 import { BodyText } from '../components/BodyText'
 import { Button }   from '../components/Button'
 import { supabase } from '../../shared/supabase'
@@ -43,14 +44,14 @@ function CommentDetail({
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 flex-shrink-0">
-        <button onClick={onBack} className="text-gray-400 hover:text-gray-600 transition-colors duration-150">
+        <IconButton onClick={onBack}>
           <Icon icon={arrowLeftIcon} width={18} height={18} />
-        </button>
+        </IconButton>
         <span className="text-[12px] text-gray-500 truncate">{hostname(comment.url)}</span>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        <div className="relative rounded-lg overflow-hidden border border-gray-200">
+        <div className="relative rounded-9 overflow-hidden border border-gray-200">
           {imgError || !comment.screenshot_url ? (
             <div className="w-full h-32 bg-gray-50 flex flex-col items-center justify-center gap-2 text-gray-400">
               <Icon icon={imageOffIcon} width={20} height={20} />
@@ -181,7 +182,7 @@ export function Feed({ userId }: { userId: string }) {
           <button
             onClick={toggleFollow}
             disabled={toggling}
-            className={`flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border transition-colors flex-shrink-0 ${
+            className={`flex items-center gap-1 px-2 py-1 text-[11px] rounded-6 border transition-colors flex-shrink-0 ${
               isFollowing
                 ? 'border-blue-200 bg-blue-50 text-blue-600'
                 : 'border-gray-200 text-gray-500 hover:border-blue-300 hover:text-blue-600'

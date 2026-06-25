@@ -64,10 +64,14 @@ export interface Contact {
   addressee:  ContactProfile
 }
 
+export type Theme = 'light' | 'dark' | 'system'
+
 export interface DashboardContext {
   userId:         string
   profile:        Profile | null
   search:         string
   filterTypes:    Set<FilterType>
   refreshProfile: () => Promise<void>
+  theme:          Theme
+  setTheme:       (t: Theme) => void
 }
