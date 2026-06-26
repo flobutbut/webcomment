@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AuthModal } from '../components/AuthModal'
 import { PageComments } from '../components/PageComments'
@@ -52,12 +52,105 @@ function GitHubIcon() {
   )
 }
 
+const TEXT_SELECTOR = 'h1,h2,h3,h4,h5,h6,p,span,a,button,li,label,strong,em'
+const INFLUENCE = 600  // px — radius within which the circle starts shrinking
+const MIN_SIZE  = 40   // px — fully contracted size
+const LERP      = 0.15  // position lag — lower = more trailing
+
+function distToRect(x: number, y: number, rect: DOMRect): number {
+  const dx = Math.max(rect.left - x, 0, x - rect.right)
+  const dy = Math.max(rect.top  - y, 0, y - rect.bottom)
+  return Math.sqrt(dx * dx + dy * dy)
+}
+
 export default function Landing() {
   const [modal, setModal] = useState<'signin' | 'early-access' | null>(null)
   const navigate = useNavigate()
+  const circleRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const circle = circleRef.current
+    if (!circle) return
+
+    let textEls: Element[] = []
+    let rafId = 0
+    let targetX = 0, targetY = 0
+    let curX = 0, curY = 0
+    let active = false
+
+    const cacheEls = () => {
+      textEls = Array.from(document.querySelectorAll(TEXT_SELECTOR))
+    }
+    cacheEls()
+
+    const animate = () => {
+      rafId = requestAnimationFrame(animate)
+
+      curX += (targetX - curX) * LERP
+      curY += (targetY - curY) * LERP
+      circle.style.transform = `translate(calc(${curX}px - 50%), calc(${curY}px - 50%))`
+
+      const baseSize = Math.max(window.innerWidth, window.innerHeight) * 2
+      let minDist = Infinity
+      for (const el of textEls) {
+        const d = distToRect(targetX, targetY, el.getBoundingClientRect())
+        if (d < minDist) minDist = d
+        if (minDist === 0) break
+      }
+
+      const t     = Math.min(1, minDist / INFLUENCE)
+      const eased = t * t * t
+      const size  = MIN_SIZE + (baseSize - MIN_SIZE) * eased
+      circle.style.width  = `${size}px`
+      circle.style.height = `${size}px`
+    }
+
+    const onMove = (e: MouseEvent) => {
+      if (!active) {
+        // snap on first appearance to avoid sliding in from (0,0)
+        curX = e.clientX
+        curY = e.clientY
+        active = true
+        circle.style.opacity = '1'
+      }
+      targetX = e.clientX
+      targetY = e.clientY
+    }
+
+    const onLeave = () => {
+      active = false
+      circle.style.opacity = '0'
+    }
+
+    animate()
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseleave', onLeave)
+    window.addEventListener('resize', cacheEls)
+    return () => {
+      cancelAnimationFrame(rafId)
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseleave', onLeave)
+      window.removeEventListener('resize', cacheEls)
+    }
+  }, [])
 
   return (
     <div className="relative min-h-screen bg-[#080808] text-white cursor-crosshair">
+
+      {/* ── Cursor ring ─────────────────────────────────────────── */}
+      <div
+        ref={circleRef}
+        className="fixed pointer-events-none z-[9999] rounded-full"
+        style={{
+          width: '200vmax',
+          height: '200vmax',
+          top: 0,
+          left: 0,
+          opacity: 0,
+          border: '1px solid rgba(255,255,255,0.08)',
+          transition: 'opacity 0.3s',
+        }}
+      />
 
       {/* ── Nav ─────────────────────────────────────────────────── */}
       <nav className="fixed top-0 left-0 right-0 z-40 border-b border-[#111] bg-[#080808]/90 backdrop-blur-md">
