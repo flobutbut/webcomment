@@ -12,7 +12,7 @@ Format: `## [version] — YYYY-MM-DD`, most recent first.
 
 ---
 
-## [Unreleased]
+## [1.1.0] — 2026-06-26
 
 ### Rebranding — WebComment → VoidMark
 
