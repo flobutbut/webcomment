@@ -28,7 +28,7 @@ export function Login() {
   return (
     <div className="w-full h-full flex flex-col justify-center px-6 py-8">
       <div className="mb-6">
-        <h1 className="text-[22px] font-semibold text-gray-900 mb-1">WebComment</h1>
+        <h1 className="text-[22px] font-semibold text-gray-900 mb-1">VoidMark</h1>
         <p className="text-[13px] text-gray-500">Anchored comments on the web</p>
       </div>
 
@@ -76,12 +76,12 @@ export function Login() {
       <div className="mt-6 pt-5 border-t border-gray-100 text-center">
         <p className="text-[12px] text-gray-400 mb-2">No account yet?</p>
         <a
-          href="https://webcomment.app"
+          href="https://voidmark.app"
           target="_blank"
           rel="noopener noreferrer"
           className="text-[12px] text-blue-600 hover:text-blue-700 font-medium transition-colors"
         >
-          Request early access at webcomment.app →
+          Request early access at voidmark.app →
         </a>
       </div>
     </div>

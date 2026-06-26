@@ -118,7 +118,7 @@ export function DashboardLayout() {
           <div className="flex items-center gap-2 text-sm font-medium min-w-0">
             <Download className="w-4 h-4 flex-shrink-0" />
             <span className="truncate">
-              Install the Chrome extension to annotate any web page — the full WebComment experience.
+              Install the Chrome extension to annotate any web page — the full VoidMark experience.
             </span>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">

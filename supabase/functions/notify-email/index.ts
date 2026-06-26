@@ -7,7 +7,7 @@ const supabase = createClient(
 
 const RESEND_API_KEY  = Deno.env.get('RESEND_API_KEY')!
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const APP_NAME        = 'WebComment'
+const APP_NAME        = 'VoidMark'
 
 function escapeHtml(str: string): string {
   return str
@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
         'Content-Type':  'application/json',
       },
       body: JSON.stringify({
-        from:    `${APP_NAME} <noreply@webcomment.app>`,
+        from:    `${APP_NAME} <noreply@voidmark.app>`,
         to:      address,
         subject: `${escapeHtml(fromUsername)} t'a laissé un commentaire`,
         html: `
@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
           <blockquote style="border-left:3px solid #2563EB;padding-left:12px;color:#475569">
             ${escapeHtml(comment.body)}
           </blockquote>
-          <p>Installe l'extension <a href="https://webcomment.app">WebComment</a> pour voir la capture et répondre.</p>
+          <p>Installe l'extension <a href="https://voidmark.app">VoidMark</a> pour voir la capture et répondre.</p>
         `,
       }),
     })

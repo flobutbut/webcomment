@@ -63,7 +63,7 @@ export default function Landing() {
       <nav className="fixed top-0 left-0 right-0 z-40 border-b border-[#111] bg-[#080808]/90 backdrop-blur-md">
         <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
           <span className="font-mono text-sm font-bold tracking-widest text-white">
-            WEBCOMMENT
+            VOIDMARK
           </span>
           <div className="flex items-center gap-3">
             <button
@@ -257,7 +257,7 @@ export default function Landing() {
       <footer className="border-t border-[#0f0f0f] py-8 px-6">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <span className="font-mono text-xs font-bold tracking-widest text-zinc-500">
-            WEBCOMMENT
+            VOIDMARK
           </span>
           <div className="flex items-center gap-6">
             <a

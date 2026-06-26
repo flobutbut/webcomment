@@ -17,7 +17,7 @@ import { Feed }     from './views/Feed'
 import { Settings } from './views/Settings'
 import { Groups }   from './views/Groups'
 
-const WEBAPP_URL = (import.meta.env.VITE_SHARE_BASE_URL as string) || 'https://webcomment.app'
+const WEBAPP_URL = (import.meta.env.VITE_SHARE_BASE_URL as string) || 'https://voidmark.app'
 
 type Tab = 'inbox' | 'sent' | 'feed'
 
@@ -166,7 +166,7 @@ export function App() {
 
       {/* Header */}
       <div className="flex items-center justify-between px-4 border-b border-gray-100 h-12 flex-shrink-0">
-        <span className="font-semibold text-blue-600 text-[14px] tracking-tight">WebComment</span>
+        <span className="font-semibold text-blue-600 text-[14px] tracking-tight">VoidMark</span>
         <div className="flex items-center gap-1.5">
           <button
             onClick={togglePins}

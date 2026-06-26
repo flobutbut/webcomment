@@ -349,7 +349,7 @@ function showComposerOverlay(pinX: number, pinY: number) {
     <div id="pin-dot"></div>
     <div id="modal">
       <div id="header">
-        <span id="title">WebComment</span>
+        <span id="title">VoidMark</span>
         <button id="close">${SVG_X}</button>
       </div>
       <div id="body-area">
@@ -1397,7 +1397,7 @@ function showErrorScreen(comment: CommentInboxItem) {
     })
     overlay.innerHTML = `
       <div style="max-width:560px;padding:2rem;text-align:center">
-        <div style="color:#2563EB;font-size:1.25rem;font-weight:700;margin-bottom:0.5rem">WebComment</div>
+        <div style="color:#2563EB;font-size:1.25rem;font-weight:700;margin-bottom:0.5rem">VoidMark</div>
         <p style="color:#475569;margin-bottom:0.25rem;font-size:0.9rem">
           <strong>${escapeHtml(comment.from_username)}</strong> shared something on this page with you.
         </p>
@@ -1450,7 +1450,7 @@ function showShareBanner(context: ShareContext) {
     boxShadow: '0 4px 12px rgba(99,102,241,0.4)', cursor: 'pointer',
     fontFamily: 'system-ui, -apple-system, sans-serif',
   })
-  banner.textContent = `WebComment · Your comments will go to ${escapeHtml(context.recipient_name)}`
+  banner.textContent = `VoidMark · Your comments will go to ${escapeHtml(context.recipient_name)}`
   setTimeout(() => banner.remove(), 5000)
   document.body.appendChild(banner)
 }

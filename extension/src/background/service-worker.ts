@@ -732,7 +732,7 @@ function subscribeToInbox(userId: string) {
     chrome.notifications.create({
       type:    'basic',
       iconUrl: 'icons/48.png',
-      title:   'WebComment',
+      title:   'VoidMark',
       message: 'You received a new comment',
     })
   }

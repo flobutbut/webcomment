@@ -4,7 +4,7 @@ const supabase    = createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 )
-const SHARE_BASE  = Deno.env.get('SHARE_BASE_URL') ?? 'https://webcomment.app'
+const SHARE_BASE  = Deno.env.get('SHARE_BASE_URL') ?? 'https://voidmark.app'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {

@@ -12,6 +12,18 @@ Format: `## [version] — YYYY-MM-DD`, most recent first.
 
 ---
 
+## [Unreleased]
+
+### Rebranding — WebComment → VoidMark
+
+- **Extension**: renamed to "VoidMark" in `manifest.json` (name + gecko id), popup `<title>`, popup header, login screen title, system notification title, composer overlay header, share overlay, share banner
+- **Webapp**: renamed to "VoidMark" in `index.html` (`<title>` + `og:title`), landing nav and footer, dashboard extension install banner
+- **Extension**: `VITE_SHARE_BASE_URL` corrected from `http://localhost:5173` to `https://www.voidmark.app` — "Open web app" and share links were opening localhost instead of the production app
+- **Backend**: all Edge Functions (`notify-email`, `request-invite`, `approve-invite`, `create-share-link`) migrated from `webcomment.app` to `voidmark.app` (sender address, app name, redirect URLs)
+- **Extension**: early access link in Login view updated to `https://voidmark.app`
+
+---
+
 ## [1.0.0] — 2026-06-26
 
 ### Early access — Webapp + Extension + Backend

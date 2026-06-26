@@ -7,7 +7,7 @@ const supabase = createClient(
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!
 const ADMIN_EMAIL    = 'f.butour@gmail.com'
-const APP_NAME       = 'WebComment'
+const APP_NAME       = 'VoidMark'
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
@@ -65,11 +65,11 @@ Deno.serve(async (req) => {
   const approveUrl =
     `${Deno.env.get('SUPABASE_URL')}/functions/v1/approve-invite?token=${row?.token}`
 
-  await fetch('https://api.resend.com/emails', {
+  const resendRes = await fetch('https://api.resend.com/emails', {
     method:  'POST',
     headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      from:    `${APP_NAME} <noreply@webcomment.app>`,
+      from:    `${APP_NAME} <noreply@voidmark.app>`,
       to:      ADMIN_EMAIL,
       subject: `New invite request — ${escapeHtml(full_name)}`,
       html: `
@@ -88,6 +88,12 @@ Deno.serve(async (req) => {
       `,
     }),
   })
+
+  if (!resendRes.ok) {
+    const resendError = await resendRes.text()
+    console.error('Resend error:', resendRes.status, resendError)
+    return json({ error: `Resend ${resendRes.status}: ${resendError}` }, 500)
+  }
 
   return json({ ok: true })
 })
