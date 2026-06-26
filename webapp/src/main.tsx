@@ -7,6 +7,12 @@ import App from './App'
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
-    <Analytics />
+    <Analytics
+      beforeSend={(event) => {
+        const url = new URL(event.url)
+        url.search = ''
+        return { ...event, url: url.toString() }
+      }}
+    />
   </StrictMode>,
 )

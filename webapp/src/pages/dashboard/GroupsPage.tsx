@@ -367,7 +367,7 @@ function PeopleTab({
 }) {
   const [inviting,  setInviting]  = useState(false)
   const [query,     setQuery]     = useState('')
-  const [results,   setResults]   = useState<{ id: string; username: string; email: string }[]>([])
+  const [results,   setResults]   = useState<{ id: string; username: string; avatar_url?: string; initials?: string }[]>([])
   const [searching, setSearching] = useState(false)
   const [addingId,  setAddingId]  = useState<string | null>(null)
   const [error,     setError]     = useState<string | null>(null)
@@ -382,12 +382,7 @@ function PeopleTab({
     if (!query.trim()) { setResults([]); return }
     const t = setTimeout(async () => {
       setSearching(true)
-      const { data } = await supabase
-        .from('profiles')
-        .select('id, username, email')
-        .or(`username.ilike.%${query}%,email.ilike.%${query}%`)
-        .neq('id', userId)
-        .limit(6)
+      const { data } = await supabase.rpc('search_profiles', { query })
       setResults((data ?? []).filter((u: { id: string }) => !memberIds.has(u.id)))
       setSearching(false)
     }, 250)
@@ -464,7 +459,6 @@ function PeopleTab({
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                   {member.username}{isSelf ? ' (you)' : ''}
                 </p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{member.email}</p>
               </div>
               {member.role === 'owner' && (
                 <span className="text-[10px] bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-3 px-1.5 py-0.5 font-semibold flex-shrink-0">
@@ -508,7 +502,6 @@ function PeopleTab({
                     <Avatar username={u.username} size="sm" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{u.username}</p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{u.email}</p>
                     </div>
                     <Button
                       variant="primary"

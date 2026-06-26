@@ -275,7 +275,6 @@ function showComposerOverlay(pinX: number, pinY: number) {
       .at-item { display: flex; align-items: center; gap: 8px; padding: 8px 14px; cursor: pointer; transition: background 0.1s; }
       .at-item:hover, .at-item.active { background: #f1f5f9; }
       .at-name { font-size: 13px; font-weight: 500; color: #1e293b; }
-      .at-email { font-size: 12px; color: #94a3b8; }
       .at-group-icon { width: 22px; height: 22px; border-radius: 50%; background: #eef2ff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
       .at-group-badge { font-size: 10px; color: #6366f1; background: #eef2ff; border-radius: 3px; padding: 1px 5px; font-weight: 600; margin-left: auto; }
 
@@ -415,7 +414,7 @@ function showComposerOverlay(pinX: number, pinY: number) {
   // ------------------------------------------------------------------
 
   type AtItem =
-    | { kind: 'user';  id: string; username: string; email: string }
+    | { kind: 'user';  id: string; username: string }
     | { kind: 'group'; id: string; name: string }
 
   let atItems:    AtItem[] = []
@@ -442,7 +441,7 @@ function showComposerOverlay(pinX: number, pinY: number) {
         el.innerHTML = `<span class="at-group-icon">${SVG_USERS_SMALL}</span><span class="at-name">${escapeHtml(item.name)}</span><span class="at-group-badge">group</span>`
         el.addEventListener('mousedown', e => { e.preventDefault(); insertAtGroup(item) })
       } else {
-        el.innerHTML = `<span class="at-name">@${escapeHtml(item.username)}</span><span class="at-email">${escapeHtml(item.email)}</span>`
+        el.innerHTML = `<span class="at-name">@${escapeHtml(item.username)}</span>`
         el.addEventListener('mousedown', e => { e.preventDefault(); insertAtUser(item) })
       }
       atDropdown.appendChild(el)

@@ -274,10 +274,7 @@ async function searchUsers(query: string): Promise<unknown> {
   try {
     await ensureSession()
     const { data, error } = await supabase
-      .from('profiles')
-      .select('id, username, email')
-      .or(`username.ilike.%${query}%,email.ilike.%${query}%`)
-      .limit(5)
+      .rpc('search_profiles', { query })
     if (error) throw error
     return { users: data ?? [] }
   } catch (err) {

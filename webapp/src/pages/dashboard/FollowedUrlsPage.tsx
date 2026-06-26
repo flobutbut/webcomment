@@ -112,7 +112,7 @@ export function FollowedUrlsPage() {
               >
                 <div className="flex items-start gap-2">
                   <img
-                    src={`https://www.google.com/s2/favicons?domain=${hostname(f.url)}&sz=16`}
+                    src={`https://icons.duckduckgo.com/ip3/${hostname(f.url)}.ico`}
                     className="w-4 h-4 mt-0.5 flex-shrink-0 rounded-3"
                     alt=""
                     onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}

@@ -255,10 +255,15 @@ export default function Landing() {
 
       {/* ── Footer ──────────────────────────────────────────────── */}
       <footer className="border-t border-[#0f0f0f] py-8 px-6">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <span className="font-mono text-xs font-bold tracking-widest text-zinc-500">
-            VOIDMARK
-          </span>
+        <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-1">
+            <span className="font-mono text-xs font-bold tracking-widest text-zinc-500">
+              VOIDMARK
+            </span>
+            <span className="font-mono text-xs text-zinc-700">
+              // leave no trace. leave a comment.
+            </span>
+          </div>
           <div className="flex items-center gap-6">
             <a
               href={GITHUB_URL}
@@ -280,10 +285,13 @@ export default function Landing() {
             >
               Sign up
             </button>
+            <a href="/privacy" className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+              Privacy
+            </a>
+            <a href="/legal" className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+              Legal
+            </a>
           </div>
-          <span className="font-mono text-xs text-zinc-600 hidden sm:block">
-            // leave no trace. leave a comment.
-          </span>
         </div>
       </footer>
 

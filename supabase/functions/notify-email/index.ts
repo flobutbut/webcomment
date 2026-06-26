@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
     .select('recipient_type, recipient_id, recipient_email')
     .eq('comment_id', comment_id)
 
-  const toEmails: { address: string; name: string }[] = []
+  const toEmails: { address: string; name: string; isRegistered: boolean }[] = []
 
   const userIds = (recipients ?? [])
     .filter(r => r.recipient_type === 'user' && r.recipient_id && r.recipient_id !== comment.from_user_id)
@@ -73,20 +73,24 @@ Deno.serve(async (req) => {
 
     for (const p of profiles ?? []) {
       if (p.notify_on_comment !== false) {
-        toEmails.push({ address: p.email, name: p.username })
+        toEmails.push({ address: p.email, name: p.username, isRegistered: true })
       }
     }
   }
 
   for (const r of recipients ?? []) {
     if (r.recipient_type === 'email' && r.recipient_email) {
-      toEmails.push({ address: r.recipient_email, name: r.recipient_email })
+      toEmails.push({ address: r.recipient_email, name: r.recipient_email, isRegistered: false })
     }
   }
 
   let sent = 0
   const errors: unknown[] = []
-  for (const { address, name } of toEmails) {
+  for (const { address, name, isRegistered } of toEmails) {
+    const footerOptOut = isRegistered
+      ? `Gérez vos préférences de notification dans <a href="https://voidmark.app/dashboard/settings" style="color:#64748b">vos paramètres</a>.`
+      : `Pour ne plus recevoir ces emails, répondez à ce message avec l'objet <strong>désinscription</strong>.`
+
     const res = await fetch('https://api.resend.com/emails', {
       method:  'POST',
       headers: {
@@ -104,6 +108,12 @@ Deno.serve(async (req) => {
             ${htmlBody}
           </blockquote>
           <p>Installe l'extension <a href="https://voidmark.app">VoidMark</a> pour voir la capture et répondre.</p>
+          <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
+          <p style="font-size:12px;color:#94a3b8;line-height:1.6">
+            Vous recevez cet email car quelqu'un a partagé un commentaire avec vous via ${APP_NAME}.<br>
+            ${footerOptOut}<br>
+            Responsable du traitement : VoidMark — <a href="https://voidmark.app/privacy" style="color:#94a3b8">Politique de confidentialité</a>
+          </p>
         `,
       }),
     })
@@ -114,7 +124,7 @@ Deno.serve(async (req) => {
     }
   }
 
-  return new Response(JSON.stringify({ sent, toEmails, errors, hasApiKey: !!RESEND_API_KEY }), {
+  return new Response(JSON.stringify({ sent, errors, hasApiKey: !!RESEND_API_KEY }), {
     headers: { 'Content-Type': 'application/json' },
   })
 })

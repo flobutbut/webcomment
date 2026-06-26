@@ -129,3 +129,4 @@ Then update DNS at Hostinger: add a CNAME record pointing to `cname.vercel-dns.c
 - Roadmap: `docs/ROADMAP.md`
 - Design: `docs/DESIGN.md`
 - RGPD : `docs/RGPD.md`
+- Registre des traitements (Art. 30) : `docs/REGISTRE_TRAITEMENTS.md`

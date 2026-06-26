@@ -43,7 +43,6 @@ function ContactRow({
       />
       <div className="flex-1 min-w-0">
         <p className="text-[13px] font-medium text-gray-900 truncate">{other.username}</p>
-        <p className="text-[11px] text-gray-400 truncate">{other.email}</p>
       </div>
       {contact.status === 'pending' && isAddressee && (
         <div className="flex gap-1.5 flex-shrink-0">
@@ -93,8 +92,8 @@ export function Settings({ profile, onClose, onContactChange }: { profile: Profi
       .from('contacts')
       .select(`
         id, status, created_at,
-        requester:profiles!contacts_requester_id_fkey(id, username, email, avatar_url, initials),
-        addressee:profiles!contacts_addressee_id_fkey(id, username, email, avatar_url, initials)
+        requester:profiles!contacts_requester_id_fkey(id, username, avatar_url, initials),
+        addressee:profiles!contacts_addressee_id_fkey(id, username, avatar_url, initials)
       `)
       .in('status', ['pending', 'accepted'])
       .order('created_at', { ascending: false })

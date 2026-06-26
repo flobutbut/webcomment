@@ -342,7 +342,7 @@ function GroupMembersTab({
 }) {
   const [inviting,  setInviting]  = useState(false)
   const [query,     setQuery]     = useState('')
-  const [results,   setResults]   = useState<{ id: string; username: string; email: string }[]>([])
+  const [results,   setResults]   = useState<{ id: string; username: string; avatar_url?: string; initials?: string }[]>([])
   const [searching, setSearching] = useState(false)
   const [addingId,  setAddingId]  = useState<string | null>(null)
   const [error,     setError]     = useState<string | null>(null)
@@ -354,12 +354,7 @@ function GroupMembersTab({
     if (!query.trim()) { setResults([]); return }
     const timer = setTimeout(async () => {
       setSearching(true)
-      const { data } = await supabase
-        .from('profiles')
-        .select('id, username, email')
-        .or(`username.ilike.%${query}%,email.ilike.%${query}%`)
-        .neq('id', userId)
-        .limit(5)
+      const { data } = await supabase.rpc('search_profiles', { query })
       setResults((data ?? []).filter((u: { id: string }) => !memberIds.has(u.id)))
       setSearching(false)
     }, 250)
@@ -484,7 +479,6 @@ function GroupMembersTab({
                   <Avatar username={u.username} className="w-6 h-6 text-[9px] flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-[12px] font-medium text-gray-900 truncate">{u.username}</p>
-                    <p className="text-[10px] text-gray-400 truncate">{u.email}</p>
                   </div>
                   <button
                     onClick={() => handleInvite(u.id)}

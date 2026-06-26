@@ -68,6 +68,8 @@ export function SettingsPage() {
   const [emailError,     setEmailError]     = useState<string | null>(null)
   const newEmailInputRef = useRef<HTMLInputElement>(null)
 
+  const [exporting,   setExporting]   = useState(false)
+
   const [deleteOpen,    setDeleteOpen]    = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState('')
   const [deleting,      setDeleting]      = useState(false)
@@ -168,6 +170,28 @@ export function SettingsPage() {
     await supabase.from('profiles').update({ [field]: value }).eq('id', userId)
     await refreshProfile()
     setSavingNotif(false)
+  }
+
+  async function handleExport() {
+    setExporting(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    if (!token) { setExporting(false); return }
+
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/export-data`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+    if (res.ok) {
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = 'voidmark-data-export.json'
+      a.click()
+      URL.revokeObjectURL(url)
+    }
+    setExporting(false)
   }
 
   function openDeleteModal() {
@@ -422,6 +446,20 @@ export function SettingsPage() {
                     : '—'}
                 </span>
               </div>
+            </div>
+          </section>
+
+          {/* Data & Privacy */}
+          <section>
+            <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">Data & Privacy</h2>
+            <div className="rounded-12 border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-800 px-4 py-4 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Export my data</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Download all your data as a JSON file (GDPR Art. 20).</p>
+              </div>
+              <Button variant="secondary" size="md" onClick={handleExport} disabled={exporting} className="flex-shrink-0 w-auto px-4">
+                {exporting ? 'Exporting…' : 'Download'}
+              </Button>
             </div>
           </section>
 

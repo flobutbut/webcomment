@@ -12,6 +12,24 @@ Format: `## [version] — YYYY-MM-DD`, most recent first.
 
 ---
 
+## [1.3.0] — 2026-06-26
+
+### RGPD & Legal compliance
+
+- **Backend**: nouvelle RPC `search_profiles` (SECURITY DEFINER) — recherche par username ou email côté serveur sans jamais retourner l'email dans les résultats ; `get_group_members` mis à jour en conséquence
+- **Extension / Webapp**: l'email des autres utilisateurs n'est plus exposé dans la recherche de membres de groupe, la liste des contacts, et l'autocomplétion `@mention`
+- **Webapp**: favicon des URLs suivies migré de Google vers DuckDuckGo — supprime la fuite des domaines consultés vers Google
+- **Webapp**: Vercel Analytics — `beforeSend` retire les query params avant envoi
+- **Backend**: `delete-account` déplace les screenshots vers un dossier neutre (`deleted/`) avant suppression du compte, retirant le UUID du chemin Storage tout en préservant les fichiers pour les destinataires
+- **Backend**: share links — expiration par défaut à 30 jours sur les nouveaux liens
+- **Backend**: `notify-email` — footer légal dans chaque email (opt-out adapté inscrits / non-inscrits, lien politique de confidentialité) ; `toEmails` retiré de la réponse pour ne plus logger les adresses en clair
+- **Backend**: job pg_cron quotidien à 3h — purge automatique des emails de destinataires non-inscrits après 90 jours (Art. 5(1)(e) RGPD)
+- **Backend**: Edge Function `export-data` — export JSON de toutes les données utilisateur (profil, commentaires, follows, contacts, groupes) pour conformité Art. 20 portabilité
+- **Webapp**: Settings → section "Data & Privacy" avec bouton "Download my data"
+- **Webapp**: page `/privacy` — politique de confidentialité complète (bases légales, sous-traitants, durées de conservation, droits des personnes)
+- **Webapp**: page `/legal` — CGU (10 sections, usages interdits détaillés, modération, droit français) + Mentions légales LCEN
+- **Docs**: registre des activités de traitement Art. 30 (`docs/REGISTRE_TRAITEMENTS.md`)
+
 ## [1.2.0] — 2026-06-26
 
 - **Webapp**: added Notifications section in Settings (placed after Profile) — two email toggles ("New comment received", "Contact request"), saved instantly on toggle with optimistic update
