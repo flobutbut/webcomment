@@ -3,6 +3,7 @@ import Landing from './pages/Landing'
 import WelcomePage from './pages/WelcomePage'
 import PrivacyPage from './pages/PrivacyPage'
 import LegalPage from './pages/LegalPage'
+import ReleasesPage from './pages/ReleasesPage'
 import { DashboardLayout } from './pages/dashboard/DashboardLayout'
 import { InboxPage } from './pages/dashboard/InboxPage'
 import { MyCommentsPage } from './pages/dashboard/MyCommentsPage'
@@ -26,8 +27,9 @@ export default function App() {
           <Route path="groups"      element={<GroupsPage />} />
           <Route path="settings"    element={<SettingsPage />} />
         </Route>
-        <Route path="/privacy" element={<PrivacyPage />} />
-        <Route path="/legal"   element={<LegalPage />} />
+        <Route path="/privacy"   element={<PrivacyPage />} />
+        <Route path="/legal"     element={<LegalPage />} />
+        <Route path="/releases"  element={<ReleasesPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

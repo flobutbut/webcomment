@@ -12,6 +12,14 @@ Format: `## [version] — YYYY-MM-DD`, most recent first.
 
 ---
 
+## [Unreleased]
+
+- **Webapp**: page `/releases` — notes de version publiques, une entrée par version avec tag, headline et bullets lisibles, design timeline cohérent avec le reste du site
+- **Webapp**: capsule de version dans le hero de la landing mise à jour (`v1.3.0`) et convertie en lien vers `/releases`
+- **Webapp**: lien "Releases" ajouté dans le footer de la landing
+
+---
+
 ## [1.3.0] — 2026-06-26
 
 ### RGPD & Legal compliance

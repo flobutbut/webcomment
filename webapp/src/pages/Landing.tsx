@@ -92,10 +92,13 @@ export default function Landing() {
         <div className="absolute top-14 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-600/20 to-transparent" />
 
         <div className="relative z-10 text-center max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 mb-10 px-3 py-1.5 rounded-full border border-[#2a2a2a] bg-[#0c0c0c] font-mono text-xs text-zinc-400">
+          <a
+            href="/releases"
+            className="inline-flex items-center gap-2 mb-10 px-3 py-1.5 rounded-full border border-[#2a2a2a] bg-[#0c0c0c] font-mono text-xs text-zinc-400 hover:border-[#3a3a3a] hover:text-zinc-300 transition-colors"
+          >
             <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block animate-pulse" />
-            v0.1 — private beta
-          </div>
+            v1.3.0 — private beta
+          </a>
 
           <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-[1.05]">
             Leave marks<br />
@@ -285,6 +288,9 @@ export default function Landing() {
             >
               Sign up
             </button>
+            <a href="/releases" className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+              Releases
+            </a>
             <a href="/privacy" className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
               Privacy
             </a>
