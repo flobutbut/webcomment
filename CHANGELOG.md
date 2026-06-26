@@ -12,6 +12,26 @@ Format: `## [version] — YYYY-MM-DD`, most recent first.
 
 ---
 
+## [1.0.0] — 2026-06-26
+
+### Early access — Webapp + Extension + Backend
+
+- **Backend**: migration `invite_requests` — table storing early access requests (full_name, email, status, secure token)
+- **Backend**: new Edge Function `request-invite` (public) — validates and persists invite requests, notifies admin at f.butour@gmail.com via Resend with a one-click approve button
+- **Backend**: new Edge Function `approve-invite` — token-secured, calls Supabase Auth Admin `inviteUserByEmail`, marks request as approved (idempotent), returns branded HTML confirmation page
+- **Webapp**: `AuthModal` signup tab replaced with "Early access" — collects full name + email, posts to `request-invite`, shows "request received" confirmation
+- **Webapp**: new `/welcome` route (`WelcomePage`) — intercepts Supabase invite link hash tokens, lets invited users choose username, initials, and set their password; updates both `auth.users` metadata and `profiles` table, then redirects to dashboard
+- **Extension**: `Login` view signup form removed; sign-in only, with a "Request early access at webcomment.app →" link below the form
+
+### Groups — Extension + Webapp
+
+- **Backend**: migration `groups_management` — RLS policies (update/delete groups + members), 6 RPCs (`create_group`, `get_user_groups`, `get_group_members`, `invite_group_member`, `update_member_role`, `remove_group_member`, `get_group_feed`), Realtime on `group_members`
+- **Extension**: new Groups view (icon in header) — create group, list groups, group detail with Feed and Members tabs; inline rename, invite member by username/email search, promote/demote owner, remove member, leave/delete group
+- **Extension**: `@mention` autocomplete now includes the user's groups (shown with group icon + "group" badge); `@GroupName` in body is resolved at send time — the comment reaches all group members' inboxes and appears in the shared group Feed
+- **Extension**: new message handlers: `SEARCH_RECIPIENTS`, `GET_USER_GROUPS`, `CREATE_GROUP`, `GET_GROUP_MEMBERS`, `GET_GROUP_FEED`, `INVITE_MEMBER`, `UPDATE_MEMBER_ROLE`, `REMOVE_MEMBER`, `RENAME_GROUP`, `DELETE_GROUP`
+- **Webapp**: `/dashboard/groups` page — two-column layout (group list left, group detail right), group cards show name + people count, detail with Feed / People tabs, dark mode support; Groups nav item no longer marked "coming soon"
+- **Webapp**: group Feed tab uses the full `CommentDetail` card (screenshot, pin, avatar, formatted date, body with tag/mention highlights, "Open" button) — consistent with the Feed page
+
 ## [0.9.0] — 2026-06-26
 
 ### Dark mode — Webapp dashboard

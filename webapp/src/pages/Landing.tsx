@@ -53,7 +53,7 @@ function GitHubIcon() {
 }
 
 export default function Landing() {
-  const [modal, setModal] = useState<'signin' | 'signup' | null>(null)
+  const [modal, setModal] = useState<'signin' | 'early-access' | null>(null)
   const navigate = useNavigate()
 
   return (
@@ -73,7 +73,7 @@ export default function Landing() {
               Sign in
             </button>
             <button
-              onClick={() => setModal('signup')}
+              onClick={() => setModal('early-access')}
               className="text-sm bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-4 py-1.5 rounded-6 transition-colors font-semibold"
             >
               Get started
@@ -122,7 +122,7 @@ export default function Landing() {
               Get the extension
             </a>
             <button
-              onClick={() => setModal('signup')}
+              onClick={() => setModal('early-access')}
               className="flex items-center gap-2 border border-[#222] text-zinc-400 hover:text-white hover:border-[#333] px-6 py-3 rounded-9 font-medium text-sm transition-all w-full sm:w-auto justify-center"
             >
               Create account →
@@ -242,7 +242,7 @@ export default function Landing() {
                   View on GitHub
                 </a>
                 <button
-                  onClick={() => setModal('signup')}
+                  onClick={() => setModal('early-access')}
                   className="text-sm text-zinc-400 hover:text-zinc-200 transition-colors py-3 font-mono"
                 >
                   or create an account →
@@ -275,7 +275,7 @@ export default function Landing() {
               Sign in
             </button>
             <button
-              onClick={() => setModal('signup')}
+              onClick={() => setModal('early-access')}
               className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
             >
               Sign up

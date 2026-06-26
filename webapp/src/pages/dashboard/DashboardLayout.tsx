@@ -157,7 +157,7 @@ export function DashboardLayout() {
 
           <div className="my-2 border-t border-gray-200 dark:border-dark-border" />
 
-          <NavItem to="/dashboard/groups" icon={<UsersRound className="w-4 h-4" />} label="Groups" comingSoon />
+          <NavItem to="/dashboard/groups" icon={<UsersRound className="w-4 h-4" />} label="Groups" />
         </nav>
 
         <div className="p-3 border-t border-gray-200 dark:border-dark-border space-y-0.5 bg-white dark:bg-dark-900 flex-shrink-0">

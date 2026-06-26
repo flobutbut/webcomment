@@ -276,6 +276,8 @@ function showComposerOverlay(pinX: number, pinY: number) {
       .at-item:hover, .at-item.active { background: #f1f5f9; }
       .at-name { font-size: 13px; font-weight: 500; color: #1e293b; }
       .at-email { font-size: 12px; color: #94a3b8; }
+      .at-group-icon { width: 22px; height: 22px; border-radius: 50%; background: #eef2ff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+      .at-group-badge { font-size: 10px; color: #6366f1; background: #eef2ff; border-radius: 3px; padding: 1px 5px; font-weight: 600; margin-left: auto; }
 
       #body-area { padding: 10px 14px; }
       #message-input {
@@ -362,7 +364,14 @@ function showComposerOverlay(pinX: number, pinY: number) {
   const msgInput   = shadow.getElementById('message-input') as HTMLTextAreaElement
   const atDropdown = shadow.getElementById('at-dropdown')!
   const statusEl   = shadow.getElementById('status')!
-  let isPublic = false
+  let isPublic  = false
+  let userGroups: { id: string; name: string }[] = []
+
+  // Pre-fetch groups for @mention resolution at send time
+  safeSendMessage({ type: 'GET_USER_GROUPS' }).then(res => {
+    userGroups = (res as { groups?: { id: string; name: string }[] })?.groups ?? []
+  })
+
   if (PUBLIC_MODE) {
     const publicLabel = shadow.getElementById('public-label') as HTMLLabelElement
     publicLabel.addEventListener('click', () => {
@@ -377,31 +386,41 @@ function showComposerOverlay(pinX: number, pinY: number) {
   cancelBtn.addEventListener('click', close)
 
   // ------------------------------------------------------------------
-  // @mention in textarea
+  // @mention in textarea — users and groups
   // ------------------------------------------------------------------
 
-  let atUsers:     { id: string; username: string; email: string }[] = []
-  let atActiveIdx  = -1
-  let atStart      = 0
-  let atTimer:     ReturnType<typeof setTimeout>
+  type AtItem =
+    | { kind: 'user';  id: string; username: string; email: string }
+    | { kind: 'group'; id: string; name: string }
+
+  let atItems:    AtItem[] = []
+  let atActiveIdx = -1
+  let atStart     = 0
 
   function closeAt() {
     atDropdown.style.display = 'none'
     atDropdown.innerHTML     = ''
-    atUsers     = []
+    atItems     = []
     atActiveIdx = -1
   }
+
+  const SVG_USERS_SMALL = `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`
 
   function renderAt() {
     atDropdown.innerHTML = ''
     atActiveIdx = -1
-    if (!atUsers.length) { closeAt(); return }
-    atUsers.forEach((u, i) => {
-      const item = document.createElement('div')
-      item.className = 'at-item'
-      item.innerHTML = `<span class="at-name">@${escapeHtml(u.username)}</span><span class="at-email">${escapeHtml(u.email)}</span>`
-      item.addEventListener('mousedown', e => { e.preventDefault(); insertAt(u) })
-      atDropdown.appendChild(item)
+    if (!atItems.length) { closeAt(); return }
+    atItems.forEach(item => {
+      const el = document.createElement('div')
+      el.className = 'at-item'
+      if (item.kind === 'group') {
+        el.innerHTML = `<span class="at-group-icon">${SVG_USERS_SMALL}</span><span class="at-name">${escapeHtml(item.name)}</span><span class="at-group-badge">group</span>`
+        el.addEventListener('mousedown', e => { e.preventDefault(); insertAtGroup(item) })
+      } else {
+        el.innerHTML = `<span class="at-name">@${escapeHtml(item.username)}</span><span class="at-email">${escapeHtml(item.email)}</span>`
+        el.addEventListener('mousedown', e => { e.preventDefault(); insertAtUser(item) })
+      }
+      atDropdown.appendChild(el)
     })
     atDropdown.style.display = 'block'
   }
@@ -412,12 +431,23 @@ function showComposerOverlay(pinX: number, pinY: number) {
     })
   }
 
-  function insertAt(u: { id: string; username: string; email: string }) {
+  function insertAtUser(u: { id: string; username: string; email: string }) {
     const cursor = msgInput.selectionStart ?? 0
     const before = msgInput.value.slice(0, atStart)
     const after  = msgInput.value.slice(cursor)
     msgInput.value = before + `@${u.username} ` + after
     const pos = atStart + u.username.length + 2
+    msgInput.setSelectionRange(pos, pos)
+    closeAt()
+    msgInput.focus()
+  }
+
+  function insertAtGroup(g: { id: string; name: string }) {
+    const cursor = msgInput.selectionStart ?? 0
+    const before = msgInput.value.slice(0, atStart)
+    const after  = msgInput.value.slice(cursor)
+    msgInput.value = before + `@${g.name} ` + after
+    const pos = atStart + g.name.length + 2
     msgInput.setSelectionRange(pos, pos)
     closeAt()
     msgInput.focus()
@@ -435,18 +465,20 @@ function showComposerOverlay(pinX: number, pinY: number) {
     if (!query) { closeAt(); return }
     atSearchTimer = setTimeout(async () => {
       const res = await safeSendMessage({
-        type: 'SEARCH_USERS', payload: { query },
-      }) as { users?: { id: string; username: string; email: string }[] }
-      atUsers = res?.users ?? []
+        type: 'SEARCH_RECIPIENTS', payload: { query },
+      }) as { users?: { id: string; username: string; email: string }[]; groups?: { id: string; name: string }[] }
+      const groups: AtItem[] = (res?.groups ?? []).map(g => ({ kind: 'group' as const, ...g }))
+      const users:  AtItem[] = (res?.users  ?? []).map(u => ({ kind: 'user'  as const, ...u }))
+      atItems = [...groups, ...users]
       renderAt()
     }, 200)
   })
 
   msgInput.addEventListener('keydown', e => {
-    if (atDropdown.style.display !== 'none' && atUsers.length) {
+    if (atDropdown.style.display !== 'none' && atItems.length) {
       if (e.key === 'ArrowDown') {
         e.preventDefault()
-        atActiveIdx = Math.min(atActiveIdx + 1, atUsers.length - 1)
+        atActiveIdx = Math.min(atActiveIdx + 1, atItems.length - 1)
         updateAtActive(); return
       } else if (e.key === 'ArrowUp') {
         e.preventDefault()
@@ -454,7 +486,10 @@ function showComposerOverlay(pinX: number, pinY: number) {
         updateAtActive(); return
       } else if (e.key === 'Enter') {
         e.preventDefault()
-        insertAt(atUsers[atActiveIdx >= 0 ? atActiveIdx : 0]); return
+        const item = atItems[atActiveIdx >= 0 ? atActiveIdx : 0]
+        if (item.kind === 'group') insertAtGroup(item)
+        else insertAtUser(item)
+        return
       } else if (e.key === 'Escape') {
         closeAt(); return
       }
@@ -472,22 +507,43 @@ function showComposerOverlay(pinX: number, pinY: number) {
     const body = msgInput.value.trim()
     if (!body) { statusEl.textContent = 'Write a message.'; return }
 
-    // Resolve @mentions in the message body
-    const mentionedNames = [...new Set(
-      [...body.matchAll(/@([A-Za-z0-9_]+)/g)].map(m => m[1].toLowerCase())
-    )]
+    // Separate @mentions in body into group vs user names
+    const allMentionedNames = [...body.matchAll(/@([A-Za-z0-9_]+)/g)].map(m => m[1])
+    const groupNameMap = new Map(userGroups.map(g => [g.name.toLowerCase(), g.id]))
 
+    const seenGroupIds  = new Set<string>()
+    const groupRecipients: { type: 'group'; id: string }[] = []
+    const userMentionNames: string[] = []
+
+    for (const name of allMentionedNames) {
+      const groupId = groupNameMap.get(name.toLowerCase())
+      if (groupId) {
+        if (!seenGroupIds.has(groupId)) {
+          groupRecipients.push({ type: 'group', id: groupId })
+          seenGroupIds.add(groupId)
+        }
+      } else {
+        userMentionNames.push(name.toLowerCase())
+      }
+    }
+
+    // Resolve user @mentions
+    const seenUserIds   = new Set<string>()
     const mentionedIds: { type: 'user'; id: string }[] = []
-    for (const name of mentionedNames) {
+    for (const name of [...new Set(userMentionNames)]) {
       const res = await safeSendMessage({
         type: 'SEARCH_USERS', payload: { query: name },
       }) as { users?: { id: string; username: string; email: string }[] }
       const found = res?.users?.find(u => u.username.toLowerCase() === name)
-      if (found) mentionedIds.push({ type: 'user', id: found.id })
+      if (found && !seenUserIds.has(found.id)) {
+        mentionedIds.push({ type: 'user', id: found.id })
+        seenUserIds.add(found.id)
+      }
     }
 
-    const to: ({ type: 'public' } | { type: 'user'; id: string })[] = [
+    const to: ({ type: 'public' } | { type: 'user'; id: string } | { type: 'group'; id: string })[] = [
       ...(isPublic ? [{ type: 'public' as const }] : []),
+      ...groupRecipients,
       ...mentionedIds,
     ]
 

@@ -4,6 +4,7 @@ import { Icon } from '@iconify/react'
 import mapPinIcon       from '@iconify-icons/lucide/map-pin'
 import mapPinOffIcon    from '@iconify-icons/lucide/map-pin-off'
 import userIcon         from '@iconify-icons/lucide/user'
+import usersIcon        from '@iconify-icons/lucide/users'
 import externalLinkIcon from '@iconify-icons/lucide/external-link'
 import { supabase } from '../shared/supabase'
 import type { Profile } from '../shared/types'
@@ -14,6 +15,7 @@ import { Inbox }    from './views/Inbox'
 import { Sent }     from './views/Sent'
 import { Feed }     from './views/Feed'
 import { Settings } from './views/Settings'
+import { Groups }   from './views/Groups'
 
 const WEBAPP_URL = (import.meta.env.VITE_SHARE_BASE_URL as string) || 'https://webcomment.app'
 
@@ -34,6 +36,7 @@ export function App() {
   const [newCommentErr,       setNewCommentErr]       = useState<string | null>(null)
   const [pinsVisible,         setPinsVisible]         = useState(false)
   const [pendingContactCount, setPendingContactCount] = useState(0)
+  const [showGroups,          setShowGroups]          = useState(false)
 
   // Auth
   useEffect(() => {
@@ -178,7 +181,16 @@ export function App() {
             Pins
           </button>
           <button
-            onClick={() => setSettings(s => !s)}
+            onClick={() => { setShowGroups(g => !g); setSettings(false) }}
+            title="Groups"
+            className={`w-7 h-7 flex items-center justify-center rounded-6 transition-colors duration-150 ${
+              showGroups ? 'bg-indigo-50 text-indigo-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            <Icon icon={usersIcon} width={15} height={15} />
+          </button>
+          <button
+            onClick={() => { setSettings(s => !s); setShowGroups(false) }}
             title="Settings"
             className={`relative w-7 h-7 flex items-center justify-center rounded-6 transition-colors duration-150 ${
               settings ? 'bg-blue-50 text-blue-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
@@ -194,8 +206,8 @@ export function App() {
         </div>
       </div>
 
-      {/* Tabs — hidden in settings mode */}
-      {!settings && <Tabs tabs={MAIN_TABS} active={tab} onChange={setTab} />}
+      {/* Tabs — hidden in settings/groups mode */}
+      {!settings && !showGroups && <Tabs tabs={MAIN_TABS} active={tab} onChange={setTab} />}
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto min-h-0">
@@ -205,16 +217,18 @@ export function App() {
               onClose={() => setSettings(false)}
               onContactChange={() => refreshContactBadge(session.user.id)}
             />
-          : tab === 'inbox'
-            ? <Inbox userId={session.user.id} onRead={() => chrome.runtime.sendMessage({ type: 'UPDATE_BADGE' })} />
-            : tab === 'sent'
-              ? <Sent userId={session.user.id} />
-              : <Feed userId={session.user.id} />
+          : showGroups
+            ? <Groups userId={session.user.id} />
+            : tab === 'inbox'
+              ? <Inbox userId={session.user.id} onRead={() => chrome.runtime.sendMessage({ type: 'UPDATE_BADGE' })} />
+              : tab === 'sent'
+                ? <Sent userId={session.user.id} />
+                : <Feed userId={session.user.id} />
         }
       </div>
 
       {/* Footer */}
-      {!settings && (
+      {!settings && !showGroups && (
         <div className="flex-shrink-0 px-4 py-3 border-t border-gray-100 space-y-1.5">
           {newCommentErr && (
             <p className="text-[11px] text-red-500 text-center">{newCommentErr}</p>

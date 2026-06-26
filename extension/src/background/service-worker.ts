@@ -149,21 +149,31 @@ supabase.auth.onAuthStateChange((event, session) => {
 
 async function handleMessage(message: Message): Promise<unknown> {
   switch (message.type) {
-    case 'PREPARE_CAPTURE':   return prepareCapture(message.payload)
-    case 'FINALIZE_COMMENT':  return finalizeComment(message.payload)
-    case 'SEARCH_USERS':      return searchUsers(message.payload.query)
-    case 'MARK_READ':         return markRead(message.payload.recipientId)
-    case 'RESOLVE_COMMENT':   return resolveComment(message.payload.recipientId)
-    case 'DELETE_COMMENT':    return deleteCommentById(message.payload.commentId)
-    case 'GET_SESSION':       return { session: currentSession }
-    case 'UPDATE_BADGE':      return handleUpdateBadge()
-    case 'REFRESH_PINS':      return handleRefreshPins(message.payload.visible)
-    case 'GET_USER_PROFILE':  return getUserProfile(message.payload.userId)
-    case 'ADD_CONTACT':       return addContact(message.payload.addresseeId)
-    case 'ADD_FOLLOW':        return addFollow(message.payload.followedId)
-    case 'REMOVE_FOLLOW':     return removeFollow(message.payload.followedId)
+    case 'PREPARE_CAPTURE':    return prepareCapture(message.payload)
+    case 'FINALIZE_COMMENT':   return finalizeComment(message.payload)
+    case 'SEARCH_USERS':       return searchUsers(message.payload.query)
+    case 'SEARCH_RECIPIENTS':  return searchRecipients(message.payload.query)
+    case 'MARK_READ':          return markRead(message.payload.recipientId)
+    case 'RESOLVE_COMMENT':    return resolveComment(message.payload.recipientId)
+    case 'DELETE_COMMENT':     return deleteCommentById(message.payload.commentId)
+    case 'GET_SESSION':        return { session: currentSession }
+    case 'UPDATE_BADGE':       return handleUpdateBadge()
+    case 'REFRESH_PINS':       return handleRefreshPins(message.payload.visible)
+    case 'GET_USER_PROFILE':   return getUserProfile(message.payload.userId)
+    case 'ADD_CONTACT':        return addContact(message.payload.addresseeId)
+    case 'ADD_FOLLOW':         return addFollow(message.payload.followedId)
+    case 'REMOVE_FOLLOW':      return removeFollow(message.payload.followedId)
     case 'NAVIGATE_TO_COMMENT': return navigateToComment(message.payload.commentId, message.payload.url)
-    default:                    return { error: 'Unknown message type' }
+    case 'GET_USER_GROUPS':    return getUserGroups()
+    case 'CREATE_GROUP':       return createGroup(message.payload.name)
+    case 'GET_GROUP_MEMBERS':  return getGroupMembers(message.payload.groupId)
+    case 'GET_GROUP_FEED':     return getGroupFeed(message.payload.groupId)
+    case 'INVITE_MEMBER':      return inviteMember(message.payload.groupId, message.payload.userId)
+    case 'UPDATE_MEMBER_ROLE': return updateMemberRole(message.payload.groupId, message.payload.userId, message.payload.role)
+    case 'REMOVE_MEMBER':      return removeMember(message.payload.groupId, message.payload.userId)
+    case 'RENAME_GROUP':       return renameGroup(message.payload.groupId, message.payload.name)
+    case 'DELETE_GROUP':       return deleteGroup(message.payload.groupId)
+    default:                   return { error: 'Unknown message type' }
   }
 }
 
@@ -257,7 +267,7 @@ async function finalizeComment(payload: FinalizePayload): Promise<unknown> {
 }
 
 // ---------------------------------------------------------------------------
-// User search
+// User / recipient search
 // ---------------------------------------------------------------------------
 
 async function searchUsers(query: string): Promise<unknown> {
@@ -272,6 +282,133 @@ async function searchUsers(query: string): Promise<unknown> {
     return { users: data ?? [] }
   } catch (err) {
     return { error: (err as Error).message, users: [] }
+  }
+}
+
+async function searchRecipients(query: string): Promise<unknown> {
+  try {
+    await ensureSession()
+    const [usersResult, groupsResult] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('id, username, email')
+        .or(`username.ilike.%${query}%,email.ilike.%${query}%`)
+        .neq('id', currentSession!.user.id)
+        .limit(4),
+      supabase.rpc('get_user_groups'),
+    ])
+    const users  = usersResult.data ?? []
+    const allGroups = (groupsResult.data ?? []) as { id: string; name: string }[]
+    const groups = allGroups
+      .filter(g => g.name.toLowerCase().includes(query.toLowerCase()))
+      .slice(0, 3)
+      .map(g => ({ id: g.id, name: g.name }))
+    return { users, groups }
+  } catch (err) {
+    return { error: (err as Error).message, users: [], groups: [] }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Group management
+// ---------------------------------------------------------------------------
+
+async function getUserGroups(): Promise<unknown> {
+  try {
+    await ensureSession()
+    const { data, error } = await supabase.rpc('get_user_groups')
+    if (error) throw error
+    return { groups: data ?? [] }
+  } catch (err) {
+    return { error: (err as Error).message, groups: [] }
+  }
+}
+
+async function createGroup(name: string): Promise<unknown> {
+  try {
+    await ensureSession()
+    const { data, error } = await supabase.rpc('create_group', { p_name: name })
+    if (error) throw error
+    return { groupId: data }
+  } catch (err) {
+    return { error: (err as Error).message }
+  }
+}
+
+async function getGroupMembers(groupId: string): Promise<unknown> {
+  try {
+    await ensureSession()
+    const { data, error } = await supabase.rpc('get_group_members', { p_group_id: groupId })
+    if (error) throw error
+    return { members: data ?? [] }
+  } catch (err) {
+    return { error: (err as Error).message, members: [] }
+  }
+}
+
+async function getGroupFeed(groupId: string): Promise<unknown> {
+  try {
+    await ensureSession()
+    const { data, error } = await supabase.rpc('get_group_feed', { p_group_id: groupId })
+    if (error) throw error
+    return { feed: data ?? [] }
+  } catch (err) {
+    return { error: (err as Error).message, feed: [] }
+  }
+}
+
+async function inviteMember(groupId: string, userId: string): Promise<unknown> {
+  try {
+    await ensureSession()
+    const { error } = await supabase.rpc('invite_group_member', { p_group_id: groupId, p_user_id: userId })
+    if (error) throw error
+    return { success: true }
+  } catch (err) {
+    return { error: (err as Error).message }
+  }
+}
+
+async function updateMemberRole(groupId: string, userId: string, role: 'owner' | 'member'): Promise<unknown> {
+  try {
+    await ensureSession()
+    const { error } = await supabase.rpc('update_member_role', { p_group_id: groupId, p_user_id: userId, p_role: role })
+    if (error) throw error
+    return { success: true }
+  } catch (err) {
+    return { error: (err as Error).message }
+  }
+}
+
+async function removeMember(groupId: string, userId: string): Promise<unknown> {
+  try {
+    await ensureSession()
+    const { error } = await supabase.rpc('remove_group_member', { p_group_id: groupId, p_user_id: userId })
+    if (error) throw error
+    return { success: true }
+  } catch (err) {
+    return { error: (err as Error).message }
+  }
+}
+
+async function renameGroup(groupId: string, name: string): Promise<unknown> {
+  try {
+    await ensureSession()
+    const { error } = await supabase.from('groups').update({ name: name.trim() }).eq('id', groupId)
+    if (error) throw error
+    return { success: true }
+  } catch (err) {
+    return { error: (err as Error).message }
+  }
+}
+
+async function deleteGroup(groupId: string): Promise<unknown> {
+  try {
+    await ensureSession()
+    const { error } = await supabase.from('groups').delete().eq('id', groupId)
+    if (error) throw error
+    return { success: true }
+  } catch (err) {
+    return { error: (err as Error).message }
   }
 }
 

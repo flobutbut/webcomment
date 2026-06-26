@@ -85,3 +85,38 @@ export interface Contact {
   requester:  ContactProfile
   addressee:  ContactProfile
 }
+
+export interface Group {
+  id:           string
+  name:         string
+  created_by:   string
+  created_at:   string
+  role:         'owner' | 'member'
+  member_count: number
+}
+
+export interface GroupMember {
+  user_id:    string
+  username:   string
+  email:      string
+  avatar_url: string | null
+  initials:   string | null
+  role:       'owner' | 'member'
+  joined_at:  string
+}
+
+export interface GroupFeedItem {
+  comment_id:      string
+  from_user_id:    string
+  from_username:   string
+  from_avatar_url: string | null
+  from_initials:   string | null
+  url:             string
+  screenshot_url:  string
+  pin_x:           number
+  pin_y:           number
+  body:            string
+  mentions:        Mention[]
+  tags:            string[] | null
+  created_at:      string
+}
