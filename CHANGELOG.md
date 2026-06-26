@@ -12,6 +12,21 @@ Format: `## [version] — YYYY-MM-DD`, most recent first.
 
 ---
 
+## [1.2.0] — 2026-06-26
+
+- **Webapp**: added Notifications section in Settings (placed after Profile) — two email toggles ("New comment received", "Contact request"), saved instantly on toggle with optimistic update
+- **Backend**: migration adds `notify_on_comment` and `notify_on_contact` boolean columns to `profiles` (default `true`); `notify-email` now skips users who have opted out
+- **Backend**: `notify-email` fix — `@[uuid]` mentions in stored comment bodies are now resolved back to `@username` before sending; mentions appear highlighted in blue in the email body
+- **Extension**: added Comments icon button in header — navigates to the main inbox/tabs view; Groups and Profile buttons no longer toggle back to main view on second click, mirroring a stable nav model
+- **Extension / Webapp**: logo "VOIDMARK" updated to `font-mono font-bold tracking-widest` in black, consistent with the landing page nav, in both the extension header and the webapp dashboard sidebar
+- **Webapp**: sidebar nav reordered — Groups moved above My Comments (order: Inbox → Feed → Groups → My Comments → Contacts)
+- **Webapp**: unread badge on Inbox nav item — live count of unread inbox items via new `useUnreadCount` hook with Realtime subscription; badge disappears when the inbox is visited
+- **Extension**: added "Account settings" shortcut in profile view — opens `/dashboard/settings` in a new tab directly from the extension
+- **Extension**: "Open page" and "Copy link" in comment detail view converted to icon buttons, now inline in the header next to the URL; "Mark as resolved" remains the sole action button in the content area
+- **Extension**: added styled CSS tooltips on all icon buttons (Comments, Groups, Profile, Open page, Copy link, Delete) via a new `Tooltip` component; back buttons excluded
+
+---
+
 ## [1.1.0] — 2026-06-26
 
 ### Rebranding — WebComment → VoidMark

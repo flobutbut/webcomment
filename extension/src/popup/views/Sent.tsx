@@ -12,7 +12,7 @@ import { Loading }  from '../components/Loading'
 import { BodyText } from '../components/BodyText'
 import { supabase } from '../../shared/supabase'
 import type { SentComment } from '../../shared/types'
-import { hostname, timeAgo, commentLinkUrl } from '../../shared/utils'
+import { hostname, timeAgo, commentLinkUrl, resolveBody } from '../../shared/utils'
 
 function ScreenshotThumbnail({ url, pinX, pinY }: { url: string; pinX: number; pinY: number }) {
   const [err, setErr] = useState(false)
@@ -71,7 +71,7 @@ function Detail({
         </IconButton>
         <span className="text-[12px] text-gray-500 truncate flex-1">{hostname(comment.url)}</span>
         {!confirming && (
-          <IconButton variant="danger" onClick={() => setConfirming(true)} title="Delete">
+          <IconButton variant="danger" onClick={() => setConfirming(true)} tooltip="Delete">
             <Icon icon={trash2Icon} width={14} height={14} />
           </IconButton>
         )}
@@ -210,7 +210,7 @@ export function Sent({ userId, onCommentDeleted }: { userId: string; onCommentDe
                 <span className="text-[11px] text-gray-500 truncate">{hostname(comment.url)}</span>
                 <span className="text-[11px] text-gray-400 flex-shrink-0">{timeAgo(comment.created_at)}</span>
               </div>
-              <p className="text-[12px] text-gray-600 truncate">{comment.body}</p>
+              <p className="text-[12px] text-gray-600 truncate">{resolveBody(comment.body, comment.mentions)}</p>
             </div>
           </button>
           <button

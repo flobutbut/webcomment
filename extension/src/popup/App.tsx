@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { Icon } from '@iconify/react'
-import mapPinIcon       from '@iconify-icons/lucide/map-pin'
-import mapPinOffIcon    from '@iconify-icons/lucide/map-pin-off'
-import userIcon         from '@iconify-icons/lucide/user'
-import usersIcon        from '@iconify-icons/lucide/users'
-import externalLinkIcon from '@iconify-icons/lucide/external-link'
+import mapPinIcon           from '@iconify-icons/lucide/map-pin'
+import mapPinOffIcon         from '@iconify-icons/lucide/map-pin-off'
+import userIcon              from '@iconify-icons/lucide/user'
+import usersIcon             from '@iconify-icons/lucide/users'
+import externalLinkIcon      from '@iconify-icons/lucide/external-link'
+import messagePlusIcon       from '@iconify-icons/lucide/message-square-plus'
 import { supabase } from '../shared/supabase'
 import type { Profile } from '../shared/types'
 import { Button }   from './components/Button'
 import { Tabs }     from './components/Tabs'
+import { Tooltip }  from './components/Tooltip'
 import { Login }    from './views/Login'
 import { Inbox }    from './views/Inbox'
 import { Sent }     from './views/Sent'
@@ -166,7 +168,7 @@ export function App() {
 
       {/* Header */}
       <div className="flex items-center justify-between px-4 border-b border-gray-100 h-12 flex-shrink-0">
-        <span className="font-semibold text-blue-600 text-[14px] tracking-tight">VoidMark</span>
+        <span className="font-mono text-sm font-bold tracking-widest text-gray-900">VOIDMARK</span>
         <div className="flex items-center gap-1.5">
           <button
             onClick={togglePins}
@@ -180,29 +182,41 @@ export function App() {
             <Icon icon={pinsVisible ? mapPinIcon : mapPinOffIcon} width={12} height={12} />
             Pins
           </button>
-          <button
-            onClick={() => { setShowGroups(g => !g); setSettings(false) }}
-            title="Groups"
-            className={`w-7 h-7 flex items-center justify-center rounded-6 transition-colors duration-150 ${
-              showGroups ? 'bg-indigo-50 text-indigo-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            <Icon icon={usersIcon} width={15} height={15} />
-          </button>
-          <button
-            onClick={() => { setSettings(s => !s); setShowGroups(false) }}
-            title="Settings"
-            className={`relative w-7 h-7 flex items-center justify-center rounded-6 transition-colors duration-150 ${
-              settings ? 'bg-blue-50 text-blue-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            <Icon icon={userIcon} width={15} height={15} />
-            {pendingContactCount > 0 && (
-              <span className="absolute top-0 right-0 translate-x-1/3 -translate-y-1/3 min-w-[14px] h-[14px] flex items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-bold leading-none px-[3px]">
-                {pendingContactCount}
-              </span>
-            )}
-          </button>
+          <Tooltip text="Comments">
+            <button
+              onClick={() => { setSettings(false); setShowGroups(false) }}
+              className={`w-7 h-7 flex items-center justify-center rounded-6 transition-colors duration-150 ${
+                !settings && !showGroups ? 'bg-blue-50 text-blue-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <Icon icon={messagePlusIcon} width={15} height={15} />
+            </button>
+          </Tooltip>
+          <Tooltip text="Groups">
+            <button
+              onClick={() => { if (!showGroups) { setShowGroups(true); setSettings(false) } }}
+              className={`w-7 h-7 flex items-center justify-center rounded-6 transition-colors duration-150 ${
+                showGroups ? 'bg-indigo-50 text-indigo-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <Icon icon={usersIcon} width={15} height={15} />
+            </button>
+          </Tooltip>
+          <Tooltip text="Profile">
+            <button
+              onClick={() => { if (!settings) { setSettings(true); setShowGroups(false) } }}
+              className={`relative w-7 h-7 flex items-center justify-center rounded-6 transition-colors duration-150 ${
+                settings ? 'bg-blue-50 text-blue-600' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <Icon icon={userIcon} width={15} height={15} />
+              {pendingContactCount > 0 && (
+                <span className="absolute top-0 right-0 translate-x-1/3 -translate-y-1/3 min-w-[14px] h-[14px] flex items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-bold leading-none px-[3px]">
+                  {pendingContactCount}
+                </span>
+              )}
+            </button>
+          </Tooltip>
         </div>
       </div>
 

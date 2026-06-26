@@ -36,6 +36,24 @@ Deno.serve(async (req) => {
   const fromUsername = (comment.profiles as { username: string } | null)?.username ?? 'Quelqu\'un'
   const hostname     = new URL(comment.url).hostname
 
+  // Resolve @[uuid] mentions back to @username for display
+  const mentionUuids = [...comment.body.matchAll(/@\[([0-9a-f-]+)\]/g)].map(m => m[1])
+  let resolvedBody = comment.body
+  if (mentionUuids.length > 0) {
+    const { data: mentionProfiles } = await supabase
+      .from('profiles')
+      .select('id, username')
+      .in('id', mentionUuids)
+    for (const p of (mentionProfiles ?? []) as { id: string; username: string }[]) {
+      resolvedBody = resolvedBody.replace(new RegExp(`@\\[${p.id}\\]`, 'g'), `@${p.username}`)
+    }
+  }
+  // Escape HTML then style @mentions
+  const htmlBody = escapeHtml(resolvedBody).replace(
+    /@([A-Za-z0-9_]+)/g,
+    '<strong style="color:#2563EB">@$1</strong>',
+  )
+
   const { data: recipients } = await supabase
     .from('comment_recipients')
     .select('recipient_type, recipient_id, recipient_email')
@@ -50,11 +68,13 @@ Deno.serve(async (req) => {
   if (userIds.length > 0) {
     const { data: profiles } = await supabase
       .from('profiles')
-      .select('email, username')
+      .select('email, username, notify_on_comment')
       .in('id', userIds)
 
     for (const p of profiles ?? []) {
-      toEmails.push({ address: p.email, name: p.username })
+      if (p.notify_on_comment !== false) {
+        toEmails.push({ address: p.email, name: p.username })
+      }
     }
   }
 
@@ -81,7 +101,7 @@ Deno.serve(async (req) => {
           <p>Bonjour${name !== address ? ` ${escapeHtml(name)}` : ''},</p>
           <p><strong>${escapeHtml(fromUsername)}</strong> a laissé un commentaire pour toi sur <em>${escapeHtml(hostname)}</em>.</p>
           <blockquote style="border-left:3px solid #2563EB;padding-left:12px;color:#475569">
-            ${escapeHtml(comment.body)}
+            ${htmlBody}
           </blockquote>
           <p>Installe l'extension <a href="https://voidmark.app">VoidMark</a> pour voir la capture et répondre.</p>
         `,

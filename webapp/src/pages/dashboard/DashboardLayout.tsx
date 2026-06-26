@@ -10,6 +10,7 @@ import { SearchResultsPage } from './SearchResultsPage'
 import { UserMenu } from './UserMenu'
 import { useExtensionInstalled } from '../../lib/useExtensionInstalled'
 import { useTheme } from '../../lib/useTheme'
+import { useUnreadCount } from '../../lib/useUnreadCount'
 import type { Profile, FilterType, DashboardContext } from '../../lib/types'
 import type { Session } from '@supabase/supabase-js'
 
@@ -27,6 +28,7 @@ export function DashboardLayout() {
     () => localStorage.getItem(BANNER_DISMISSED_KEY) === '1'
   )
   const extensionInstalled = useExtensionInstalled()
+  const unreadCount = useUnreadCount(session?.user.id ?? '')
 
   function dismissBanner() {
     localStorage.setItem(BANNER_DISMISSED_KEY, '1')
@@ -77,7 +79,7 @@ export function DashboardLayout() {
     if (!session?.user.id) return
     const { data } = await supabase
       .from('profiles')
-      .select('id, username, email, baseline, avatar_url, initials, created_at')
+      .select('id, username, email, baseline, avatar_url, initials, created_at, notify_on_comment, notify_on_contact')
       .eq('id', session.user.id)
       .single()
     setProfile(data)
@@ -146,18 +148,18 @@ export function DashboardLayout() {
       {/* ── Sidebar ──────────────────────────────────────────── */}
       <aside className="w-56 flex-shrink-0 bg-white dark:bg-dark-900 border-r border-gray-200 dark:border-dark-border flex flex-col overflow-hidden">
         <div className="h-14 flex items-center px-4 border-b border-gray-200 dark:border-dark-border flex-shrink-0">
-          <span className="font-mono text-xs font-bold tracking-widest text-gray-900 dark:text-gray-100">WEBCOMMENT</span>
+          <span className="font-mono text-sm font-bold tracking-widest text-gray-900 dark:text-gray-100">VOIDMARK</span>
         </div>
 
         <nav className="flex-1 overflow-y-auto p-3 space-y-0.5 bg-white dark:bg-dark-900">
-          <NavItem to="/dashboard/inbox"       icon={<Inbox         className="w-4 h-4" />} label="Inbox"       />
+          <NavItem to="/dashboard/inbox"       icon={<Inbox         className="w-4 h-4" />} label="Inbox"       badge={unreadCount} />
           <NavItem to="/dashboard/feed"        icon={<Rss           className="w-4 h-4" />} label="Feed"        />
+          <NavItem to="/dashboard/groups"      icon={<UsersRound    className="w-4 h-4" />} label="Groups"      />
           <NavItem to="/dashboard/my-comments" icon={<MessageSquare className="w-4 h-4" />} label="My Comments" />
-          <NavItem to="/dashboard/contacts"    icon={<Users         className="w-4 h-4" />} label="Contacts"    />
 
           <div className="my-2 border-t border-gray-200 dark:border-dark-border" />
 
-          <NavItem to="/dashboard/groups" icon={<UsersRound className="w-4 h-4" />} label="Groups" />
+          <NavItem to="/dashboard/contacts" icon={<Users className="w-4 h-4" />} label="Contacts" />
         </nav>
 
         <div className="p-3 border-t border-gray-200 dark:border-dark-border space-y-0.5 bg-white dark:bg-dark-900 flex-shrink-0">

@@ -13,6 +13,39 @@ const THEME_OPTIONS: { value: Theme; label: string; icon: React.ReactNode }[] = 
   { value: 'system', label: 'System', icon: <Monitor className="w-3.5 h-3.5" /> },
 ]
 
+function NotifToggle({
+  label, description, checked, disabled, onChange,
+}: {
+  label: string
+  description: string
+  checked: boolean
+  disabled: boolean
+  onChange: (v: boolean) => void
+}) {
+  return (
+    <label className={`flex items-center justify-between px-4 py-3 gap-4 cursor-pointer ${disabled ? 'opacity-60 pointer-events-none' : ''}`}>
+      <div>
+        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{label}</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{description}</p>
+      </div>
+      <button
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={`relative flex-shrink-0 w-9 h-5 rounded-full transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
+          checked ? 'bg-blue-600' : 'bg-gray-200 dark:bg-dark-600'
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${
+            checked ? 'translate-x-4' : 'translate-x-0'
+          }`}
+        />
+      </button>
+    </label>
+  )
+}
+
 export function SettingsPage() {
   const { userId, profile, refreshProfile, theme, setTheme } = useOutletContext<DashboardContext>()
   const navigate = useNavigate()
@@ -23,6 +56,10 @@ export function SettingsPage() {
   const [saving,   setSaving]   = useState(false)
   const [saved,    setSaved]    = useState(false)
   const [error,    setError]    = useState<string | null>(null)
+
+  const [notifyOnComment, setNotifyOnComment] = useState(true)
+  const [notifyOnContact, setNotifyOnContact] = useState(true)
+  const [savingNotif,     setSavingNotif]     = useState(false)
 
   const [emailEditOpen,  setEmailEditOpen]  = useState(false)
   const [newEmail,       setNewEmail]       = useState('')
@@ -42,6 +79,8 @@ export function SettingsPage() {
     setUsername(profile.username ?? '')
     setBaseline(profile.baseline ?? '')
     setInitials(profile.initials ?? '')
+    setNotifyOnComment(profile.notify_on_comment ?? true)
+    setNotifyOnContact(profile.notify_on_contact ?? true)
   }, [profile])
 
   const savedUsername = profile?.username ?? '…'
@@ -120,6 +159,15 @@ export function SettingsPage() {
     } else {
       setEmailSent(true)
     }
+  }
+
+  async function handleNotifToggle(field: 'notify_on_comment' | 'notify_on_contact', value: boolean) {
+    if (field === 'notify_on_comment') setNotifyOnComment(value)
+    else setNotifyOnContact(value)
+    setSavingNotif(true)
+    await supabase.from('profiles').update({ [field]: value }).eq('id', userId)
+    await refreshProfile()
+    setSavingNotif(false)
   }
 
   function openDeleteModal() {
@@ -275,6 +323,27 @@ export function SettingsPage() {
                 </Button>
               </div>
             </form>
+          </section>
+
+          {/* Notifications */}
+          <section>
+            <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">Notifications</h2>
+            <div className="rounded-9 border border-gray-200 dark:border-dark-border divide-y divide-gray-200 dark:divide-dark-border">
+              <NotifToggle
+                label="New comment received"
+                description="Get an email when someone sends you a comment."
+                checked={notifyOnComment}
+                disabled={savingNotif}
+                onChange={v => handleNotifToggle('notify_on_comment', v)}
+              />
+              <NotifToggle
+                label="Contact request"
+                description="Get an email when someone sends you a contact request."
+                checked={notifyOnContact}
+                disabled={savingNotif}
+                onChange={v => handleNotifToggle('notify_on_contact', v)}
+              />
+            </div>
           </section>
 
           {/* Account section — read-only info */}

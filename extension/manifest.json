@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "VoidMark",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Private anchored comments on any web page.",
 
   "browser_specific_settings": {

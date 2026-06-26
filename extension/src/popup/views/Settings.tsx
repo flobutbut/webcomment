@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
+import { Icon } from '@iconify/react'
+import externalLinkIcon from '@iconify-icons/lucide/external-link'
 import { Button } from '../components/Button'
 import { Loading } from '../components/Loading'
 import { Tabs }    from '../components/Tabs'
 import { Avatar }  from '../components/Avatar'
 import { supabase } from '../../shared/supabase'
 import type { Profile, Contact } from '../../shared/types'
+
+const WEBAPP_URL = (import.meta.env.VITE_SHARE_BASE_URL as string) || 'https://voidmark.app'
 
 type ProfileTab = 'profile' | 'contacts'
 
@@ -204,9 +208,24 @@ export function Settings({ profile, onClose, onContactChange }: { profile: Profi
                 </div>
               </div>
             )}
-            <Button variant="danger" onClick={handleLogout}>
-              Sign out
-            </Button>
+            <div className="border-t border-gray-100 pt-3">
+              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">
+                Web app
+              </p>
+              <button
+                onClick={() => { chrome.tabs.create({ url: `${WEBAPP_URL}/dashboard/settings` }); window.close() }}
+                className="flex items-center justify-between w-full px-3 py-2.5 rounded-6 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors duration-150"
+              >
+                Account settings
+                <Icon icon={externalLinkIcon} width={12} height={12} className="text-gray-400" />
+              </button>
+            </div>
+
+            <div className="border-t border-gray-100 pt-3">
+              <Button variant="danger" onClick={handleLogout}>
+                Sign out
+              </Button>
+            </div>
           </>
         )}
 

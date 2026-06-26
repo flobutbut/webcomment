@@ -1,13 +1,15 @@
 export type FilterType = 'tag' | 'url' | 'user'
 
 export interface Profile {
-  id:         string
-  username:   string
-  email:      string
-  baseline:   string | null
-  avatar_url: string | null
-  initials:   string | null
-  created_at: string
+  id:                string
+  username:          string
+  email:             string
+  baseline:          string | null
+  avatar_url:        string | null
+  initials:          string | null
+  created_at:        string
+  notify_on_comment: boolean
+  notify_on_contact: boolean
 }
 
 export interface Mention {

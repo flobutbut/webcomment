@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Icon } from '@iconify/react'
-import arrowLeftIcon  from '@iconify-icons/lucide/arrow-left'
-import arrowRightIcon from '@iconify-icons/lucide/arrow-right'
-import checkIcon      from '@iconify-icons/lucide/check'
-import link2Icon      from '@iconify-icons/lucide/link-2'
-import imageOffIcon   from '@iconify-icons/lucide/image-off'
+import arrowLeftIcon     from '@iconify-icons/lucide/arrow-left'
+import externalLinkIcon  from '@iconify-icons/lucide/external-link'
+import checkIcon         from '@iconify-icons/lucide/check'
+import link2Icon         from '@iconify-icons/lucide/link-2'
+import imageOffIcon      from '@iconify-icons/lucide/image-off'
 import { Button }      from '../components/Button'
 import { IconButton }  from '../components/IconButton'
 import { Loading }  from '../components/Loading'
@@ -76,7 +76,21 @@ function Detail({
         <IconButton onClick={onBack}>
           <Icon icon={arrowLeftIcon} width={18} height={18} />
         </IconButton>
-        <span className="text-[12px] text-gray-500 truncate">{hostname(comment.url)}</span>
+        <span className="text-[12px] text-gray-500 truncate flex-1">{hostname(comment.url)}</span>
+        <IconButton
+          onClick={async () => {
+            await chrome.storage.local.set({
+              pendingCommentLink: { url: comment.url, comment_id: comment.comment_id },
+            })
+            chrome.tabs.create({ url: comment.url })
+          }}
+          tooltip="Open page"
+        >
+          <Icon icon={externalLinkIcon} width={15} height={15} />
+        </IconButton>
+        <IconButton onClick={handleCopyLink} tooltip={copied ? 'Copied!' : 'Copy link'}>
+          <Icon icon={copied ? checkIcon : link2Icon} width={15} height={15} />
+        </IconButton>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <div className="relative rounded-9 overflow-hidden border border-gray-200">
@@ -105,26 +119,6 @@ function Detail({
           <p className="text-[11px] text-gray-400 mb-2">{new Date(comment.created_at).toLocaleString('en-US')}</p>
           <BodyText body={comment.body} mentions={comment.mentions} />
         </div>
-        <Button
-          variant="secondary"
-          onClick={async () => {
-            await chrome.storage.local.set({
-              pendingCommentLink: { url: comment.url, comment_id: comment.comment_id },
-            })
-            chrome.tabs.create({ url: comment.url })
-          }}
-          className="flex items-center justify-center gap-1.5"
-        >
-          Open page <Icon icon={arrowRightIcon} width={14} height={14} />
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={handleCopyLink}
-          className="flex items-center justify-center gap-1.5"
-        >
-          {copied ? 'Link copied!' : 'Copy link'}
-          <Icon icon={copied ? checkIcon : link2Icon} width={14} height={14} />
-        </Button>
         <Button
           variant="success"
           onClick={handleResolve}

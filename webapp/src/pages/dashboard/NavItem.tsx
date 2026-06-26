@@ -4,10 +4,11 @@ interface NavItemProps {
   to:          string
   icon:        React.ReactNode
   label:       string
+  badge?:      number
   comingSoon?: boolean
 }
 
-export function NavItem({ to, icon, label, comingSoon }: NavItemProps) {
+export function NavItem({ to, icon, label, badge, comingSoon }: NavItemProps) {
   if (comingSoon) {
     return (
       <div className="flex items-center gap-3 px-3 py-2 rounded-6 text-gray-300 dark:text-gray-600 cursor-not-allowed select-none">
@@ -33,6 +34,11 @@ export function NavItem({ to, icon, label, comingSoon }: NavItemProps) {
     >
       <span className="w-4 h-4 flex-shrink-0">{icon}</span>
       {label}
+      {!!badge && (
+        <span className="ml-auto min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-blue-600 text-white text-[10px] font-bold leading-none px-1">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
     </NavLink>
   )
 }
