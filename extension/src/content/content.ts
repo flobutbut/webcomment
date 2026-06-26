@@ -279,6 +279,16 @@ function showComposerOverlay(pinX: number, pinY: number) {
       .at-group-icon { width: 22px; height: 22px; border-radius: 50%; background: #eef2ff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
       .at-group-badge { font-size: 10px; color: #6366f1; background: #eef2ff; border-radius: 3px; padding: 1px 5px; font-weight: 600; margin-left: auto; }
 
+      #group-selector { display: none; align-items: center; gap: 7px; padding: 6px 14px 4px; border-top: 1px solid #f1f5f9; }
+      #group-selector-label { font-size: 11px; color: #94a3b8; white-space: nowrap; flex-shrink: 0; }
+      #group-select {
+        flex: 1; font-size: 12px; font-family: inherit; color: #0f172a;
+        border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 8px;
+        background: #fff; outline: none; cursor: pointer;
+        transition: border-color 0.15s;
+      }
+      #group-select:focus { border-color: #6366f1; }
+
       #body-area { padding: 10px 14px; }
       #message-input {
         width: 100%; border: 1px solid #e2e8f0; border-radius: 6px;
@@ -345,6 +355,10 @@ function showComposerOverlay(pinX: number, pinY: number) {
       <div id="body-area">
         <textarea id="message-input" rows="3" placeholder="Your comment… @ to mention"></textarea>
       </div>
+      <div id="group-selector">
+        <span id="group-selector-label">Group</span>
+        <select id="group-select"><option value="">— none —</option></select>
+      </div>
       <div id="at-dropdown"></div>
       <div id="footer">
         ${PUBLIC_MODE ? `<label id="public-label"><div id="public-switch"><div id="public-thumb"></div></div>Public</label>` : ''}
@@ -367,9 +381,20 @@ function showComposerOverlay(pinX: number, pinY: number) {
   let isPublic  = false
   let userGroups: { id: string; name: string }[] = []
 
-  // Pre-fetch groups for @mention resolution at send time
+  const groupSelectorEl = shadow.getElementById('group-selector')!
+  const groupSelectEl   = shadow.getElementById('group-select') as HTMLSelectElement
+
+  // Pre-fetch groups: populate select + cache for send-time @mention resolution
   safeSendMessage({ type: 'GET_USER_GROUPS' }).then(res => {
     userGroups = (res as { groups?: { id: string; name: string }[] })?.groups ?? []
+    if (!userGroups.length) return
+    userGroups.forEach(g => {
+      const opt = document.createElement('option')
+      opt.value       = g.id
+      opt.textContent = g.name
+      groupSelectEl.appendChild(opt)
+    })
+    groupSelectorEl.style.display = 'flex'
   })
 
   if (PUBLIC_MODE) {
@@ -507,12 +532,14 @@ function showComposerOverlay(pinX: number, pinY: number) {
     const body = msgInput.value.trim()
     if (!body) { statusEl.textContent = 'Write a message.'; return }
 
-    // Separate @mentions in body into group vs user names
+    // Start with the group chosen in the select (if any)
+    const chosenGroupId = groupSelectEl.value
+    const seenGroupIds  = new Set<string>(chosenGroupId ? [chosenGroupId] : [])
+    const groupRecipients: { type: 'group'; id: string }[] = chosenGroupId ? [{ type: 'group', id: chosenGroupId }] : []
+
+    // Also resolve any @GroupName mentions in the body (power user path)
     const allMentionedNames = [...body.matchAll(/@([A-Za-z0-9_]+)/g)].map(m => m[1])
     const groupNameMap = new Map(userGroups.map(g => [g.name.toLowerCase(), g.id]))
-
-    const seenGroupIds  = new Set<string>()
-    const groupRecipients: { type: 'group'; id: string }[] = []
     const userMentionNames: string[] = []
 
     for (const name of allMentionedNames) {
