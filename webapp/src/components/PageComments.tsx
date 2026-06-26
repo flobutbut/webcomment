@@ -34,8 +34,19 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
 }
 
+function timeUntilExpiry(createdAt: string, now: Date): string {
+  const ms = new Date(createdAt).getTime() + 24 * 60 * 60 * 1000 - now.getTime()
+  if (ms <= 0) return 'expiring…'
+  const totalMinutes = Math.floor(ms / 60_000)
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  if (hours > 0) return `disappears in ${hours}h${minutes > 0 ? ` ${minutes}m` : ''}`
+  return `disappears in ${minutes}m`
+}
+
 export function PageComments() {
   const [comments, setComments] = useState<DemoComment[]>([])
+  const [now, setNow] = useState(() => new Date())
   const [activePin, setActivePin] = useState<string | null>(null)
   const [composer, setComposer] = useState<ComposerState | null>(null)
   const [author, setAuthor] = useState('')
@@ -47,6 +58,11 @@ export function PageComments() {
 
   useEffect(() => { composerRef.current = composer }, [composer])
   useEffect(() => { activePinRef.current = activePin }, [activePin])
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(timer)
+  }, [])
 
   useEffect(() => {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
@@ -225,7 +241,7 @@ export function PageComments() {
                     <div className="flex items-center justify-between mt-2">
                       <p className="font-mono text-[9px] text-zinc-600">
                         {new Date(pin.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        {' · '}disappears in 24h
+                        {' · '}{timeUntilExpiry(pin.created_at, now)}
                       </p>
                       {canDelete && (
                         <button
