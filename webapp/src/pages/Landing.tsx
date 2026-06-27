@@ -100,7 +100,9 @@ export default function Landing() {
 
       const t     = Math.min(1, minDist / INFLUENCE)
       const eased = t * t * t
-      const size  = MIN_SIZE + (baseSize - MIN_SIZE) * eased
+      // breathing: constant amplitude — visible on the contracted ring, imperceptible on the large one
+      const pulse = 1 + Math.sin(performance.now() / 800) * 0.08
+      const size  = (MIN_SIZE + (baseSize - MIN_SIZE) * eased) * pulse
       circle.style.width  = `${size}px`
       circle.style.height = `${size}px`
     }
@@ -147,7 +149,7 @@ export default function Landing() {
           top: 0,
           left: 0,
           opacity: 0,
-          border: '1px solid rgba(255,255,255,0.08)',
+          border: '1px solid rgba(255,255,255,0.14)',
           transition: 'opacity 0.3s',
         }}
       />
