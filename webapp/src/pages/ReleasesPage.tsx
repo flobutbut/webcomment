@@ -20,6 +20,17 @@ const TAG_COLORS: Record<Release['tagColor'], string> = {
 
 const RELEASES: Release[] = [
   {
+    version: '1.3.2',
+    date: 'June 27, 2026',
+    tag: 'Tech',
+    tagColor: 'zinc',
+    headline: 'Platform improvements & internal tooling',
+    notes: [
+      { area: 'Extension', text: 'Activity and version information now synced automatically — keeps platform metrics up to date without any user action.' },
+      { area: 'Webapp', text: 'Admin interface: table columns are now resizable by drag — adjust widths to suit what you need to see.' },
+    ],
+  },
+  {
     version: '1.3.1',
     date: 'June 27, 2026',
     tag: 'Tech',

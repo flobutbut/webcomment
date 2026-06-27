@@ -87,6 +87,9 @@ export function DashboardLayout() {
     setProfile(data)
     if (data) {
       posthog.identify(data.id, { username: data.username })
+      supabase.from('profiles')
+        .update({ last_seen_webapp_at: new Date().toISOString() })
+        .eq('id', session.user.id)
     }
   }
 

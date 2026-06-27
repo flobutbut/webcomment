@@ -17,6 +17,14 @@ let realtimeInitialized = false
 // Top-level listeners (required for MV3)
 // ---------------------------------------------------------------------------
 
+chrome.runtime.onInstalled.addListener(async () => {
+  if (await ensureSession()) await reportExtensionActivity()
+})
+
+chrome.runtime.onStartup.addListener(async () => {
+  if (await ensureSession()) await reportExtensionActivity()
+})
+
 chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) => {
   if (message.type === 'CONTENT_READY') {
     const tabId = sender.tab?.id
@@ -93,6 +101,7 @@ chrome.storage.local.get('session', async ({ session }) => {
   if (!error && data.session) {
     currentSession = data.session
     chrome.storage.local.set({ session: data.session })
+    reportExtensionActivity()
     if (!realtimeInitialized) {
       realtimeInitialized = true
       subscribeToInbox(data.session.user.id)
@@ -117,6 +126,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
     supabase.auth.setSession(newSession).then(({ data, error }) => {
       if (!error && data.session) {
         currentSession = data.session
+        reportExtensionActivity()
         if (!realtimeInitialized) {
           realtimeInitialized = true
           subscribeToInbox(data.session.user.id)
@@ -130,6 +140,7 @@ supabase.auth.onAuthStateChange((event, session) => {
   currentSession = session
   if (session) {
     chrome.storage.local.set({ session })
+    reportExtensionActivity()
     if (!realtimeInitialized) {
       realtimeInitialized = true
       subscribeToInbox(session.user.id)
@@ -781,6 +792,15 @@ async function updateBadge(userId: string) {
 // ---------------------------------------------------------------------------
 // Utils
 // ---------------------------------------------------------------------------
+
+function reportExtensionActivity() {
+  if (!currentSession) return
+  const version = chrome.runtime.getManifest().version
+  supabase.from('profiles').update({
+    extension_version:     version,
+    extension_last_active: new Date().toISOString(),
+  }).eq('id', currentSession.user.id)
+}
 
 async function convertToWebP(dataUrl: string): Promise<Blob> {
   const response = await fetch(dataUrl)

@@ -15,13 +15,16 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface AdminUser {
-  id:         string
-  username:   string
-  email:      string
-  avatar_url: string | null
-  initials:   string | null
-  created_at: string
-  is_seed:    boolean
+  id:                    string
+  username:              string
+  email:                 string
+  avatar_url:            string | null
+  initials:              string | null
+  created_at:            string
+  is_seed:               boolean
+  extension_version:     string | null
+  extension_last_active: string | null
+  last_seen_webapp_at:   string | null
 }
 
 interface InviteRequest {
@@ -186,7 +189,7 @@ function UsersTab({ hideSeed, currentUserId }: { hideSeed: boolean; currentUserI
   useEffect(() => {
     supabase
       .from('profiles')
-      .select('id, username, email, avatar_url, initials, created_at, is_seed')
+      .select('id, username, email, avatar_url, initials, created_at, is_seed, extension_version, extension_last_active, last_seen_webapp_at')
       .order('created_at', { ascending: false })
       .then(({ data }) => { setUsers((data as AdminUser[]) ?? []); setLoading(false) })
   }, [])
@@ -217,10 +220,12 @@ function UsersTab({ hideSeed, currentUserId }: { hideSeed: boolean; currentUserI
   return (
     <div className="p-6">
       <ResizableTable columns={[
-        { label: 'User',   ratio: 4   },
-        { label: 'Email',  ratio: 4   },
-        { label: 'Joined', ratio: 2   },
-        { label: '',       ratio: 0.7 },
+        { label: 'User',      ratio: 3.5 },
+        { label: 'Email',     ratio: 3   },
+        { label: 'Extension', ratio: 1.5 },
+        { label: 'Last seen', ratio: 1.5 },
+        { label: 'Joined',    ratio: 1.5 },
+        { label: '',          ratio: 0.7 },
       ]}>
         <tbody className="divide-y divide-gray-100 dark:divide-dark-border">
           {visible.map(u => (
@@ -237,6 +242,17 @@ function UsersTab({ hideSeed, currentUserId }: { hideSeed: boolean; currentUserI
                 </div>
               </td>
               <td className="py-2.5 pr-4 text-gray-500 dark:text-gray-400 truncate">{u.email}</td>
+              <td className="py-2.5 pr-4">
+                {u.extension_version
+                  ? <span className="inline-flex items-center gap-1 text-xs font-mono px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400">
+                      v{u.extension_version}
+                    </span>
+                  : <span className="text-gray-300 dark:text-gray-600">—</span>
+                }
+              </td>
+              <td className="py-2.5 pr-4 text-gray-400 dark:text-gray-500 text-xs">
+                <LastSeenCell webappAt={u.last_seen_webapp_at} extAt={u.extension_last_active} />
+              </td>
               <td className="py-2.5 pr-4 text-gray-400 dark:text-gray-500">{relativeTime(u.created_at)}</td>
               <td className="py-2.5">
                 {u.id !== currentUserId && (
@@ -574,6 +590,21 @@ function ActivityTab({ hideSeed }: { hideSeed: boolean }) {
 }
 
 // ── Shared UI ─────────────────────────────────────────────────────────────────
+
+function LastSeenCell({ webappAt, extAt }: { webappAt: string | null; extAt: string | null }) {
+  const latest = [webappAt, extAt]
+    .filter(Boolean)
+    .sort()
+    .at(-1)
+  if (!latest) return <span className="text-gray-300 dark:text-gray-600">—</span>
+  const isExt = latest === extAt && extAt !== webappAt
+  return (
+    <span className="flex items-center gap-1">
+      <span className="text-[10px] text-gray-300 dark:text-gray-600">{isExt ? '⬡' : '⬢'}</span>
+      {relativeTime(latest)}
+    </span>
+  )
+}
 
 function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () => void }) {
   return (

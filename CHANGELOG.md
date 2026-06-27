@@ -12,6 +12,16 @@ Format: `## [version] — YYYY-MM-DD`, most recent first.
 
 ---
 
+## [1.3.2] — 2026-06-27
+
+- **Webapp / Admin**: tableaux de l'admin (Users, History, Comments) convertis en composant `ResizableTable` — colonnes redimensionnables par glisser-déposer, fullwidth, largeurs stockées en pourcentage avec redimensionnement voisin (col N grandit, col N+1 rétrécit)
+- **Webapp / Admin**: onglet Users enrichi avec deux nouvelles colonnes — version de l'extension installée (badge vert si connue) et date de dernière activité (webapp ou extension, la plus récente)
+- **Extension**: le service worker remonte automatiquement la version de l'extension et un timestamp d'activité vers Supabase à chaque démarrage du navigateur, installation, mise à jour et reconnexion
+- **Webapp**: `last_seen_webapp_at` mis à jour silencieusement à chaque ouverture du dashboard
+- **Backend**: migration `20260627000032` — colonnes `extension_version`, `extension_last_active`, `last_seen_webapp_at` ajoutées sur `profiles`
+
+---
+
 ## [1.3.1] — 2026-06-27
 
 - **Webapp / Tech**: audit technique complet — `ADMIN_EMAIL` sorti du code source vers `VITE_ADMIN_EMAIL` env var ; limites `.limit(200)` ajoutées aux requêtes Supabase sans borne dans `SearchResultsPage` ; type `Theme` dédupliqué (plus défini que dans `lib/types.ts`) ; `useUnreadCount` garde contre `userId` vide ; composant `ScreenshotPin` partagé entre `MyCommentsPage` et `SearchResultsPage` (remplace `ScreenshotThumb` et `Thumb` dupliqués) ; hook `useContactComments` extrait de `ContactDetail` ; variables inutilisées (`i`, `resolveBody`) supprimées ; `vite/client` ajouté aux types tsconfig pour corriger les erreurs `import.meta.env` ; `posthog-setup-report.md` ajouté au `.gitignore`
