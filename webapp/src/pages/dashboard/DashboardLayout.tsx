@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
-import { Inbox, MessageSquare, Users, UsersRound, Rss, Sparkles, Settings, Download, X, Sun, Moon } from 'lucide-react'
+import { Inbox, MessageSquare, Users, UsersRound, Rss, Sparkles, Settings, Shield, Download, X, Sun, Moon } from 'lucide-react'
 import { IconButton } from '../../components/IconButton'
 import { supabase } from '../../lib/supabase'
+import { posthog } from '../../lib/posthog'
 import { Spinner } from '../../components/Spinner'
 import { NavItem } from './NavItem'
 import { SearchBar } from './SearchBar'
@@ -29,6 +30,7 @@ export function DashboardLayout() {
   )
   const extensionInstalled = useExtensionInstalled()
   const unreadCount = useUnreadCount(session?.user.id ?? '')
+  const [pendingInvites, setPendingInvites] = useState(0)
 
   function dismissBanner() {
     localStorage.setItem(BANNER_DISMISSED_KEY, '1')
@@ -64,7 +66,7 @@ export function DashboardLayout() {
         setSession(s)
         setLoading(false)
       }
-      if (event === 'SIGNED_OUT') navigate('/', { replace: true })
+      if (event === 'SIGNED_OUT') { posthog.reset(); navigate('/', { replace: true }) }
       // Hash exchange failed: INITIAL_SESSION fires with no session
       if (event === 'INITIAL_SESSION' && !s && hasHashTokens) {
         navigate('/', { replace: true })
@@ -83,11 +85,25 @@ export function DashboardLayout() {
       .eq('id', session.user.id)
       .single()
     setProfile(data)
+    if (data) {
+      posthog.identify(data.id, { username: data.username })
+    }
   }
 
   useEffect(() => {
     refreshProfile()
   }, [session?.user.id])
+
+  const adminEmail = (import.meta.env.VITE_ADMIN_EMAIL ?? '') as string
+
+  useEffect(() => {
+    if (!adminEmail || profile?.email !== adminEmail) return
+    supabase
+      .from('invite_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'pending')
+      .then(({ count }) => setPendingInvites(count ?? 0))
+  }, [profile?.email, adminEmail])
 
   if (loading) {
     return (
@@ -165,6 +181,9 @@ export function DashboardLayout() {
         <div className="p-3 border-t border-gray-200 dark:border-dark-border space-y-0.5 bg-white dark:bg-dark-900 flex-shrink-0">
           <NavItem to="/dashboard/whats-new" icon={<Sparkles className="w-4 h-4" />} label="What's new" comingSoon />
           <NavItem to="/dashboard/settings"  icon={<Settings  className="w-4 h-4" />} label="Settings"   />
+          {adminEmail && profile?.email === adminEmail && (
+            <NavItem to="/dashboard/admin" icon={<Shield className="w-4 h-4" />} label="Admin" badge={pendingInvites} />
+          )}
         </div>
       </aside>
 

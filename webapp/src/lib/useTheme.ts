@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-
-export type Theme = 'light' | 'dark' | 'system'
+import type { Theme } from './types'
 
 const KEY = 'webcomment_theme'
 

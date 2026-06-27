@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { posthog } from '../../lib/posthog'
 import { matchesSearch } from '../../lib/utils'
 import { useInboxComments } from '../../lib/useInboxComments'
 import { Spinner } from '../../components/Spinner'
@@ -82,7 +83,7 @@ export function InboxPage() {
           />
         ) : (
           <div>
-            {filtered.map((comment, i) => (
+            {filtered.map(comment => (
               <div key={comment.recipient_id}>
                 <CommentDetail
                   url={comment.url}
@@ -101,6 +102,7 @@ export function InboxPage() {
                       .from('comment_recipients')
                       .update({ resolved_at: new Date().toISOString() })
                       .eq('id', comment.recipient_id)
+                    posthog.capture('comment_resolved', { inbox_tab: tab })
                     removeComment(comment.recipient_id)
                   }}
                 />

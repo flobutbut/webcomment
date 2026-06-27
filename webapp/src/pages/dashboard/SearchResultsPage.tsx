@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { ImageOff } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { hostname, timeAgo } from '../../lib/utils'
 import { Avatar } from '../../components/Avatar'
+import { ScreenshotPin } from '../../components/ScreenshotPin'
 import { Spinner } from '../../components/Spinner'
 import { EmptyState } from '../../components/EmptyState'
 import { CommentDetail } from './CommentDetail'
@@ -12,25 +12,6 @@ type Selected =
   | { kind: 'inbox';   item: CommentInboxItem }
   | { kind: 'sent';    item: SentComment }
   | { kind: 'contact'; item: Contact }
-
-function Thumb({ url, pinX, pinY }: { url: string; pinX: number; pinY: number }) {
-  const [err, setErr] = useState(false)
-  return (
-    <div className="relative w-12 h-8 flex-shrink-0">
-      {err ? (
-        <div className="w-12 h-8 bg-gray-50 dark:bg-dark-700 rounded-6 border border-gray-200 dark:border-dark-border flex items-center justify-center">
-          <ImageOff className="w-3 h-3 text-gray-300 dark:text-gray-600" />
-        </div>
-      ) : (
-        <>
-          <img src={url} className="w-12 h-8 object-cover rounded-6 border border-gray-200 dark:border-dark-border" alt="" onError={() => setErr(true)} />
-          <div className="absolute w-2 h-2 rounded-full bg-blue-600 border border-white shadow-sm"
-            style={{ left: `${pinX}%`, top: `${pinY}%`, transform: 'translate(-50%,-50%)' }} />
-        </>
-      )}
-    </div>
-  )
-}
 
 function SectionHeader({ label, count }: { label: string; count: number }) {
   return (
@@ -87,12 +68,14 @@ export function SearchResultsPage({ userId, search, filterTypes }: {
         .or(`from_user_id.neq.${userId},from_user_id.is.null`)
         .neq('recipient_type', 'public')
         .is('resolved_at', null)
-        .order('created_at', { ascending: false }),
+        .order('created_at', { ascending: false })
+        .limit(200),
       supabase
         .from('comments')
         .select('id, url, body, mentions, tags, screenshot_url, pin_x, pin_y, created_at')
         .eq('from_user_id', userId)
-        .order('created_at', { ascending: false }),
+        .order('created_at', { ascending: false })
+        .limit(200),
       supabase
         .from('contacts')
         .select(`id, status, created_at,
@@ -178,7 +161,7 @@ export function SearchResultsPage({ userId, search, filterTypes }: {
                       const sel: Selected = { kind: 'inbox', item: c }
                       return (
                         <button key={c.recipient_id} onClick={() => setSelected(sel)} className={ROW(isSelected(sel))}>
-                          <Thumb url={c.screenshot_url} pinX={c.pin_x} pinY={c.pin_y} />
+                          <ScreenshotPin url={c.screenshot_url} pinX={c.pin_x} pinY={c.pin_y} size="sm" />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-2 mb-0.5">
                               <span className="text-xs font-semibold text-gray-900 dark:text-gray-100 truncate">{c.from_username}</span>
@@ -202,7 +185,7 @@ export function SearchResultsPage({ userId, search, filterTypes }: {
                       const sel: Selected = { kind: 'sent', item: c }
                       return (
                         <button key={c.id} onClick={() => setSelected(sel)} className={ROW(isSelected(sel))}>
-                          <Thumb url={c.screenshot_url} pinX={c.pin_x} pinY={c.pin_y} />
+                          <ScreenshotPin url={c.screenshot_url} pinX={c.pin_x} pinY={c.pin_y} size="sm" />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-2 mb-0.5">
                               <span className="text-[11px] text-gray-400 dark:text-gray-500 truncate">{hostname(c.url)}</span>

@@ -11,6 +11,7 @@ import { ContactsPage } from './pages/dashboard/ContactsPage'
 import { FollowedUrlsPage } from './pages/dashboard/FollowedUrlsPage'
 import { SettingsPage } from './pages/dashboard/SettingsPage'
 import { GroupsPage } from './pages/dashboard/GroupsPage'
+import { AdminPage } from './pages/dashboard/AdminPage'
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="feed"        element={<FollowedUrlsPage />} />
           <Route path="groups"      element={<GroupsPage />} />
           <Route path="settings"    element={<SettingsPage />} />
+          <Route path="admin"       element={<AdminPage />} />
         </Route>
         <Route path="/privacy"   element={<PrivacyPage />} />
         <Route path="/legal"     element={<LegalPage />} />

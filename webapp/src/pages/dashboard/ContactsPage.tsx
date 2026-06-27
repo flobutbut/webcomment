@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { UserPlus } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { posthog } from '../../lib/posthog'
 import { useContacts } from '../../lib/useContacts'
+import { useContactComments } from '../../lib/useContactComments'
 import { Spinner } from '../../components/Spinner'
 import { Avatar } from '../../components/Avatar'
 import { EmptyState } from '../../components/EmptyState'
@@ -10,7 +12,7 @@ import { PageHeader } from '../../components/PageHeader'
 import { Button } from '../../components/Button'
 import { Input } from '../../components/Input'
 import { CommentDetail } from './CommentDetail'
-import type { Contact, SentComment, DashboardContext } from '../../lib/types'
+import type { Contact, DashboardContext } from '../../lib/types'
 
 function ContactDetail({ contact, currentUserId, onAccept, onDecline, onRemove }: {
   contact:       Contact
@@ -21,21 +23,7 @@ function ContactDetail({ contact, currentUserId, onAccept, onDecline, onRemove }
 }) {
   const isAddressee = contact.addressee.id === currentUserId
   const other = isAddressee ? contact.requester : contact.addressee
-  const [comments,        setComments]        = useState<SentComment[]>([])
-  const [loadingComments, setLoadingComments] = useState(true)
-
-  useEffect(() => {
-    setLoadingComments(true)
-    supabase
-      .from('comments')
-      .select('id, url, body, tags, created_at, screenshot_url, pin_x, pin_y')
-      .eq('from_user_id', other.id)
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        setComments((data as SentComment[]) ?? [])
-        setLoadingComments(false)
-      })
-  }, [other.id])
+  const { comments, loading: loadingComments } = useContactComments(other.id)
 
   return (
     <div className="h-full overflow-y-auto">
@@ -75,7 +63,7 @@ function ContactDetail({ contact, currentUserId, onAccept, onDecline, onRemove }
         <EmptyState message="No comments." variant="list" />
       ) : (
         <div>
-          {comments.map((c, i) => (
+          {comments.map(c => (
             <div key={c.id}>
               <CommentDetail
                 url={c.url}
@@ -146,6 +134,7 @@ export function ContactsPage() {
 
   async function handleAccept(id: string) {
     await acceptContact(id)
+    posthog.capture('contact_request_accepted')
     setSelected(prev => prev?.id === id ? { ...prev, status: 'accepted' } : prev)
   }
 
@@ -156,6 +145,7 @@ export function ContactsPage() {
 
   async function handleRemove(id: string) {
     await removeContact(id)
+    posthog.capture('contact_removed')
     setSelected(prev => prev?.id === id ? null : prev)
   }
 
@@ -203,6 +193,7 @@ export function ContactsPage() {
     if (error) {
       setAddStatus({ type: 'error', msg: 'Failed to send the request.' })
     } else {
+      posthog.capture('contact_request_sent', { lookup_by: isEmail ? 'email' : 'username' })
       setAddStatus({ type: 'success', msg: `Request sent to @${found.username}!` })
       setQuery('')
       refetch()

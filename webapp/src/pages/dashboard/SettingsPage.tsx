@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useOutletContext, useNavigate } from 'react-router-dom'
 import { Check, TriangleAlert, Sun, Moon, Monitor } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { posthog } from '../../lib/posthog'
 import { Button } from '../../components/Button'
 import { Input } from '../../components/Input'
 import { PageHeader } from '../../components/PageHeader'
@@ -131,6 +132,7 @@ export function SettingsPage() {
         setError('Failed to save. Please try again.')
       }
     } else {
+      posthog.capture('profile_saved')
       await refreshProfile()
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
@@ -190,6 +192,7 @@ export function SettingsPage() {
       a.download = 'voidmark-data-export.json'
       a.click()
       URL.revokeObjectURL(url)
+      posthog.capture('data_exported')
     }
     setExporting(false)
   }
@@ -232,6 +235,7 @@ export function SettingsPage() {
       return
     }
 
+    posthog.capture('account_deleted')
     await supabase.auth.signOut()
     navigate('/', { replace: true })
   }

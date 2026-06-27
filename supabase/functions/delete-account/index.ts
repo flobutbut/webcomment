@@ -5,34 +5,30 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 )
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: {
-        'Access-Control-Allow-Origin':  '*',
-        'Access-Control-Allow-Headers': 'authorization, content-type',
-      },
-    })
-  }
+const ADMIN_EMAIL = 'f.butour@gmail.com'
 
-  const authHeader = req.headers.get('Authorization')
-  if (!authHeader) return new Response('Unauthorized', { status: 401 })
+const CORS = {
+  'Access-Control-Allow-Origin':  '*',
+  'Access-Control-Allow-Headers': 'authorization, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
 
-  const { data: { user }, error: authError } = await supabase.auth.getUser(
-    authHeader.replace('Bearer ', '')
-  )
-  if (authError || !user) return new Response('Unauthorized', { status: 401 })
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...CORS, 'Content-Type': 'application/json' },
+  })
+}
 
-  // Déplacer les screenshots vers un dossier neutre avant suppression.
-  // Cela retire le UUID de l'utilisateur du chemin de stockage (RGPD Art. 17)
-  // tout en préservant les fichiers pour les destinataires des commentaires.
+async function deleteUser(targetUserId: string) {
+  // Move screenshots to neutral folder before deletion (RGPD Art. 17)
   const { data: files } = await supabase.storage
     .from('screenshots')
-    .list(user.id)
+    .list(targetUserId)
 
   if (files?.length) {
     for (const file of files) {
-      const oldPath = `${user.id}/${file.name}`
+      const oldPath = `${targetUserId}/${file.name}`
       const newPath = `deleted/${file.name}`
       const { error: moveError } = await supabase.storage
         .from('screenshots')
@@ -46,20 +42,34 @@ Deno.serve(async (req) => {
     }
   }
 
-  const { error } = await supabase.auth.admin.deleteUser(user.id)
-  if (error) {
-    console.error('delete-account error:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    })
+  return supabase.auth.admin.deleteUser(targetUserId)
+}
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response(null, { headers: CORS })
+
+  const authHeader = req.headers.get('Authorization')
+  if (!authHeader) return json({ error: 'Unauthorized' }, 401)
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser(
+    authHeader.replace('Bearer ', '')
+  )
+  if (authError || !user) return json({ error: 'Unauthorized' }, 401)
+
+  // Determine target: admin can pass target_user_id, otherwise self-delete
+  const body = await req.json().catch(() => null)
+  let targetUserId = user.id
+
+  if (body?.target_user_id) {
+    if (user.email !== ADMIN_EMAIL) return json({ error: 'Forbidden' }, 403)
+    targetUserId = body.target_user_id
   }
 
-  return new Response(JSON.stringify({ ok: true }), {
-    status: 200,
-    headers: {
-      'Content-Type':               'application/json',
-      'Access-Control-Allow-Origin': '*',
-    },
-  })
+  const { error } = await deleteUser(targetUserId)
+  if (error) {
+    console.error('delete-account error:', error)
+    return json({ error: error.message }, 500)
+  }
+
+  return json({ ok: true })
 })

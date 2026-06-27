@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { Trash2, ImageOff } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import { IconButton } from '../../components/IconButton'
+import { ScreenshotPin } from '../../components/ScreenshotPin'
 import { supabase } from '../../lib/supabase'
+import { posthog } from '../../lib/posthog'
 import { hostname, timeAgo, resolveBody, matchesSearch } from '../../lib/utils'
 import { useSentComments } from '../../lib/useSentComments'
 import { Spinner } from '../../components/Spinner'
@@ -10,25 +12,6 @@ import { PageHeader } from '../../components/PageHeader'
 import { EmptyState } from '../../components/EmptyState'
 import { CommentDetail } from './CommentDetail'
 import type { SentComment, DashboardContext, FilterType } from '../../lib/types'
-
-function ScreenshotThumb({ url, pinX, pinY }: { url: string; pinX: number; pinY: number }) {
-  const [err, setErr] = useState(false)
-  return (
-    <div className="relative w-14 h-10 flex-shrink-0">
-      {err ? (
-        <div className="w-14 h-10 bg-gray-50 dark:bg-dark-700 rounded-6 border border-gray-200 dark:border-dark-border flex items-center justify-center">
-          <ImageOff className="w-3 h-3 text-gray-300 dark:text-gray-600" />
-        </div>
-      ) : (
-        <>
-          <img src={url} className="w-14 h-10 object-cover rounded-6 border border-gray-200 dark:border-dark-border" alt="" onError={() => setErr(true)} />
-          <div className="absolute w-2.5 h-2.5 rounded-full bg-blue-600 border border-white shadow-sm"
-            style={{ left: `${pinX}%`, top: `${pinY}%`, transform: 'translate(-50%, -50%)' }} />
-        </>
-      )}
-    </div>
-  )
-}
 
 export function MyCommentsPage() {
   const { userId, search, filterTypes } = useOutletContext<DashboardContext>()
@@ -45,6 +28,7 @@ export function MyCommentsPage() {
     e.stopPropagation()
     setDeletingId(comment.id)
     await supabase.from('comments').delete().eq('id', comment.id)
+    posthog.capture('comment_deleted', { source: 'quick_delete' })
     handleDeleted(comment.id)
     setDeletingId(null)
   }
@@ -91,7 +75,7 @@ export function MyCommentsPage() {
                     onClick={() => setSelected(comment)}
                     className="w-full text-left px-4 py-3.5 flex gap-3 pr-10"
                   >
-                    <ScreenshotThumb url={comment.screenshot_url} pinX={comment.pin_x} pinY={comment.pin_y} />
+                    <ScreenshotPin url={comment.screenshot_url} pinX={comment.pin_x} pinY={comment.pin_y} />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-1 mb-0.5">
                         <span className="text-[11px] text-gray-400 dark:text-gray-500 truncate">{hostname(comment.url)}</span>
@@ -128,6 +112,7 @@ export function MyCommentsPage() {
               onOpenPage={() => window.open(selected.url, '_blank')}
               onDelete={async () => {
                 await supabase.from('comments').delete().eq('id', selected.id)
+                posthog.capture('comment_deleted', { source: 'detail_panel' })
                 handleDeleted(selected.id)
               }}
             />

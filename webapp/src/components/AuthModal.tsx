@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { posthog } from '../lib/posthog'
 import { Button } from './Button'
 
 interface Props {
@@ -61,13 +62,19 @@ export function AuthModal({ initialMode = 'signin', onClose, onSuccess }: Props)
           const data = await res.json().catch(() => ({}))
           throw new Error(data.error ?? 'Could not submit request.')
         }
+        posthog.capture('early_access_requested')
       } else {
-        const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password })
+        const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ email, password })
         if (signInErr) throw signInErr
+        if (signInData.user) {
+          posthog.identify(signInData.user.id)
+          posthog.capture('user_signed_in')
+        }
         onSuccess?.()
       }
       setDone(true)
     } catch (err: unknown) {
+      posthog.captureException(err)
       setError(err instanceof Error ? translateError(err.message) : 'An error occurred.')
     } finally {
       setLoading(false)

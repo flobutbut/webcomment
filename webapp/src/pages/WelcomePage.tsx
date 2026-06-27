@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { posthog } from '../lib/posthog'
 import { Button } from '../components/Button'
 import type { User } from '@supabase/supabase-js'
 
@@ -98,6 +99,8 @@ export default function WelcomePage() {
         throw profileErr
       }
 
+      posthog.identify(user!.id, { username })
+      posthog.capture('account_setup_completed', { username })
       setDone(true)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'An error occurred.')

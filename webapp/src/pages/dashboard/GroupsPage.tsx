@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { Users, Plus, UserPlus, Trash2, Pencil, Check, X } from 'lucide-react'
 import { supabase }       from '../../lib/supabase'
+import { posthog }        from '../../lib/posthog'
 import { Avatar }         from '../../components/Avatar'
 import { Button }         from '../../components/Button'
 import { Input }          from '../../components/Input'
@@ -44,6 +45,7 @@ export function GroupsPage() {
     const { data, error } = await supabase.rpc('create_group', { p_name: name })
     if (error) { setCreateError(error.message); setSaving(false); return }
     const newId = data as string
+    posthog.capture('group_created', { group_name: name })
     setNewName('')
     setCreating(false)
     setSaving(false)
@@ -394,6 +396,7 @@ function PeopleTab({
     setError(null)
     const { error } = await supabase.rpc('invite_group_member', { p_group_id: groupId, p_user_id: inviteeId })
     if (error) { setError(error.message); setAddingId(null); return }
+    posthog.capture('group_member_invited')
     setAddingId(null); setQuery(''); setResults([]); setInviting(false)
     onRefresh()
   }
@@ -419,6 +422,7 @@ function PeopleTab({
     setError(null)
     const { error } = await supabase.rpc('remove_group_member', { p_group_id: groupId, p_user_id: userId })
     if (error) { setError(error.message); return }
+    posthog.capture('group_left')
     onDelete()
   }
 
@@ -426,6 +430,7 @@ function PeopleTab({
     setError(null)
     const { error } = await supabase.from('groups').delete().eq('id', groupId)
     if (error) { setError(error.message); return }
+    posthog.capture('group_deleted')
     onDelete()
   }
 

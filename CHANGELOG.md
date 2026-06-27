@@ -12,8 +12,10 @@ Format: `## [version] — YYYY-MM-DD`, most recent first.
 
 ---
 
-## [Unreleased]
+## [1.3.1] — 2026-06-27
 
+- **Webapp / Tech**: audit technique complet — `ADMIN_EMAIL` sorti du code source vers `VITE_ADMIN_EMAIL` env var ; limites `.limit(200)` ajoutées aux requêtes Supabase sans borne dans `SearchResultsPage` ; type `Theme` dédupliqué (plus défini que dans `lib/types.ts`) ; `useUnreadCount` garde contre `userId` vide ; composant `ScreenshotPin` partagé entre `MyCommentsPage` et `SearchResultsPage` (remplace `ScreenshotThumb` et `Thumb` dupliqués) ; hook `useContactComments` extrait de `ContactDetail` ; variables inutilisées (`i`, `resolveBody`) supprimées ; `vite/client` ajouté aux types tsconfig pour corriger les erreurs `import.meta.env` ; `posthog-setup-report.md` ajouté au `.gitignore`
+- **Webapp / Backend**: backoffice admin en 5 onglets (Stats, Utilisateurs, Inscriptions, Commentaires, Activité), accessible sur `/dashboard/admin` uniquement pour f.butour@gmail.com — approbation/rejet des demandes d'inscription via `approve-invite` Edge Function (POST), suppression de commentaires avec nettoyage Storage, RLS admin sur `invite_requests`, `comments` (DELETE), `groups`, `group_members`, `comment_recipients`, `contacts`
 - **Webapp**: page `/releases` — notes de version publiques, une entrée par version avec tag, headline et bullets lisibles, design timeline cohérent avec le reste du site
 - **Webapp**: capsule de version dans le hero de la landing mise à jour (`v1.3.0`) et convertie en lien vers `/releases`
 - **Webapp**: lien "Releases" ajouté dans le footer de la landing

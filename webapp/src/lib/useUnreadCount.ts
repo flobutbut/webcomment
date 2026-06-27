@@ -5,6 +5,7 @@ export function useUnreadCount(userId: string) {
   const [count, setCount] = useState(0)
 
   function load() {
+    if (!userId) return
     supabase
       .from('comment_inbox')
       .select('recipient_id', { count: 'exact', head: true })

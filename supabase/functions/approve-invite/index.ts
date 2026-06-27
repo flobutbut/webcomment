@@ -5,7 +5,21 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 )
 
-const APP_URL = Deno.env.get('APP_URL') || 'https://voidmark.app'
+const APP_URL    = Deno.env.get('APP_URL') || 'https://voidmark.app'
+const ADMIN_EMAIL = 'f.butour@gmail.com'
+
+const CORS = {
+  'Access-Control-Allow-Origin':  '*',
+  'Access-Control-Allow-Headers': 'content-type, authorization',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+}
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...CORS, 'Content-Type': 'application/json' },
+  })
+}
 
 function page(title: string, body: string, status: 'success' | 'error' | 'info' = 'success') {
   const colors = {
@@ -88,7 +102,82 @@ function escapeHtml(s: string) {
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
-Deno.serve(async (req) => {
+// ── POST — backoffice API (approve or reject by id) ──────────────────────────
+async function handlePost(req: Request): Promise<Response> {
+  if (req.method === 'OPTIONS') return new Response(null, { headers: CORS })
+
+  const jwt = req.headers.get('Authorization')?.replace('Bearer ', '')
+  if (!jwt) return json({ error: 'Unauthorized' }, 401)
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser(jwt)
+  if (authError || user?.email !== ADMIN_EMAIL) return json({ error: 'Forbidden' }, 403)
+
+  let body: { invite_id?: string; action?: string; email?: string; full_name?: string }
+  try { body = await req.json() } catch { return json({ error: 'Invalid JSON' }, 400) }
+
+  const { action } = body
+  if (!action) return json({ error: 'action is required' }, 400)
+
+  // ── direct invite (admin sends without a prior request) ──
+  if (action === 'direct') {
+    const email     = body.email?.trim().toLowerCase()
+    const full_name = body.full_name?.trim() || email?.split('@')[0] || ''
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return json({ error: 'Invalid email address.' }, 400)
+    }
+
+    const { error: inviteError } = await (supabase.auth.admin as unknown as {
+      inviteUserByEmail: (email: string, opts: { redirectTo: string; data: Record<string, string> }) => Promise<{ error: Error | null }>
+    }).inviteUserByEmail(email, {
+      redirectTo: `${APP_URL}/welcome`,
+      data: { full_name },
+    })
+    if (inviteError) return json({ error: inviteError.message }, 500)
+
+    // upsert a record so it shows up in the backoffice history
+    await supabase
+      .from('invite_requests')
+      .upsert({ email, full_name, status: 'approved' }, { onConflict: 'email' })
+
+    return json({ ok: true })
+  }
+
+  // ── approve / reject an existing request ──
+  const { invite_id } = body
+  if (!invite_id) return json({ error: 'invite_id is required' }, 400)
+  if (action !== 'approve' && action !== 'reject') return json({ error: 'unknown action' }, 400)
+
+  const { data: invite, error: fetchError } = await supabase
+    .from('invite_requests')
+    .select('*')
+    .eq('id', invite_id)
+    .single()
+
+  if (fetchError || !invite) return json({ error: 'Invite request not found' }, 404)
+
+  if (action === 'reject') {
+    await supabase.from('invite_requests').update({ status: 'rejected' }).eq('id', invite_id)
+    return json({ ok: true })
+  }
+
+  // approve
+  if (invite.status === 'approved') return json({ ok: true, already: true })
+
+  const { error: inviteError } = await (supabase.auth.admin as unknown as {
+    inviteUserByEmail: (email: string, opts: { redirectTo: string; data: Record<string, string> }) => Promise<{ error: Error | null }>
+  }).inviteUserByEmail(invite.email, {
+    redirectTo: `${APP_URL}/welcome`,
+    data: { full_name: invite.full_name },
+  })
+
+  if (inviteError) return json({ error: inviteError.message }, 500)
+
+  await supabase.from('invite_requests').update({ status: 'approved' }).eq('id', invite_id)
+  return json({ ok: true })
+}
+
+// ── GET — email link approval (returns HTML page) ────────────────────────────
+async function handleGet(req: Request): Promise<Response> {
   const token = new URL(req.url).searchParams.get('token')
 
   if (!token) {
@@ -142,4 +231,10 @@ Deno.serve(async (req) => {
     `An account setup email has been sent to <strong>${escapeHtml(invite.full_name)}</strong> at <strong>${escapeHtml(invite.email)}</strong>. They'll receive a link to set up their password.`,
     'success'
   )
+}
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response(null, { headers: CORS })
+  if (req.method === 'POST') return handlePost(req)
+  return handleGet(req)
 })

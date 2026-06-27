@@ -20,6 +20,19 @@ const TAG_COLORS: Record<Release['tagColor'], string> = {
 
 const RELEASES: Release[] = [
   {
+    version: '1.3.1',
+    date: 'June 27, 2026',
+    tag: 'Tech',
+    tagColor: 'zinc',
+    headline: 'Code quality audit & security hardening',
+    notes: [
+      { area: 'Webapp', text: 'Admin email removed from source code — now configured via environment variable, never bundled in the client.' },
+      { area: 'Webapp', text: 'Supabase queries in Search now have a 200-item limit, preventing unbounded memory usage for large accounts.' },
+      { area: 'Webapp', text: 'Screenshot thumbnail component unified across pages — previously three near-identical copies existed.' },
+      { area: 'Webapp', text: 'Contact comments loading extracted into a dedicated hook; TypeScript compilation errors on import.meta.env resolved via tsconfig fix.' },
+    ],
+  },
+  {
     version: '1.3.0',
     date: 'June 26, 2026',
     tag: 'Privacy',
